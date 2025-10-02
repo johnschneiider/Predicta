@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+
+{% block title %}Deportes - Bot de Apuestas{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-futbol"></i> Deportes Disponibles</h1>
+            <button id="syncBtn" class="btn btn-primary" onclick="syncOdds()">
+                <i class="fas fa-sync-alt"></i> Sincronizar Deportes
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Estadísticas -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> Estadísticas por Deporte</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Deporte</th>
+                                <th>Clave</th>
+                                <th class="text-center">Partidos</th>
+                                <th class="text-center">Cuotas</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sport_data in sports_with_stats %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-futbol text-primary me-2"></i>
+                                        <div>
+                                            <strong>{{ sport_data.sport.title }}</strong>
+                                            {% if sport_data.sport.description %}
+                                                <br><small class="text-muted">{{ sport_data.sport.description }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <code>{{ sport_data.sport.key }}</code>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary">{{ sport_data.match_count }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-success">{{ sport_data.odds_count }}</span>
+                                </td>
+                                <td class="text-center">
+                                    {% if sport_data.sport.active %}
+                                        <span class="badge bg-success">Activo</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactivo</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <a href="{% url 'odds:matches_list' %}?sport={{ sport_data.sport.key }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> Ver Partidos
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4">
+                                    <i class="fas fa-futbol fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">No hay deportes disponibles.</p>
+                                    <button class="btn btn-primary" onclick="syncOdds()">
+                                        <i class="fas fa-sync-alt"></i> Sincronizar Deportes
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Deportes más populares -->
+{% if sports_with_stats %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-trophy"></i> Deportes más Populares</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for sport_data in sports_with_stats|slice:":6" %}
+                    {% if sport_data.match_count > 0 %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="fas fa-futbol fa-2x text-primary mb-2"></i>
+                                <h6>{{ sport_data.sport.title }}</h6>
+                                <p class="text-muted mb-2">{{ sport_data.sport.description|truncatechars:50 }}</p>
+                                <div class="d-flex justify-content-center gap-2 mb-2">
+                                    <span class="badge bg-primary">{{ sport_data.match_count }} partidos</span>
+                                    <span class="badge bg-success">{{ sport_data.odds_count }} cuotas</span>
+                                </div>
+                                <a href="{% url 'odds:matches_list' %}?sport={{ sport_data.sport.key }}" 
+                                   class="btn btn-sm btn-primary">
+                                    <i class="fas fa-eye"></i> Ver Partidos
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Información adicional -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Información</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>¿Qué son las claves de deporte?</h6>
+                        <p class="text-muted">
+                            Las claves son identificadores únicos para cada deporte en The Odds API. 
+                            Se utilizan para filtrar y obtener cuotas específicas de cada deporte.
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>¿Cómo sincronizar deportes?</h6>
+                        <p class="text-muted">
+                            Usa el botón "Sincronizar Deportes" para obtener la lista más actualizada 
+                            de deportes disponibles desde The Odds API.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,529 @@
+{% extends 'base.html' %}
+
+{% block title %}Importar Datos - Datos Históricos de Fútbol{% endblock %}
+
+{% block extra_css %}
+<style>
+    .alert-danger {
+        border-left: 4px solid #dc3545;
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+    }
+    
+    .alert-warning {
+        border-left: 4px solid #ffc107;
+        background-color: #fff3cd;
+        border-color: #ffeaa7;
+    }
+    
+    .alert-info {
+        border-left: 4px solid #0dcaf0;
+        background-color: #d1ecf1;
+        border-color: #bee5eb;
+    }
+    
+    .form-control.is-invalid,
+    .form-select.is-invalid {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    }
+    
+    .form-control.is-invalid:focus,
+    .form-select.is-invalid:focus {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    }
+    
+    .alert ul {
+        padding-left: 1.2rem;
+    }
+    
+    .alert li {
+        margin-bottom: 0.25rem;
+    }
+    
+    .alert li:last-child {
+        margin-bottom: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-upload"></i> Importar Datos Históricos</h1>
+            <a href="{% url 'football_data:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Mensajes del sistema -->
+{% if messages %}
+    <div class="row mb-4">
+        <div class="col-12">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    <i class="fas {% if message.tags == 'error' %}fa-exclamation-triangle{% elif message.tags == 'warning' %}fa-exclamation-triangle{% elif message.tags == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %}"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
+
+<!-- Instrucciones -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h5><i class="fas fa-info-circle"></i> Instrucciones de Importación</h5>
+            <ol class="mb-0">
+                <li>Selecciona uno o más archivos CSV o Excel con datos de fútbol</li>
+                <li>Los archivos deben tener las columnas estándar de Football-Data.co.uk</li>
+                <li>Elige la liga correspondiente de la lista desplegable (se aplicará a todos los archivos)</li>
+                <li>Especifica la temporada (opcional, se detectará automáticamente)</li>
+                <li>Haz clic en "Cargar y Importar" para procesar todos los archivos</li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Formulario de Importación -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-upload"></i> Cargar Archivos de Datos</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="importForm">
+                    {% csrf_token %}
+                    
+                    <!-- Mensaje general de errores del formulario -->
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger mb-4">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Error en el formulario:</strong>
+                            <ul class="mb-0 mt-2">
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.file.id_for_label }}" class="form-label">
+                            <i class="fas fa-file-excel"></i> {{ form.file.label }}
+                        </label>
+                        {{ form.file }}
+                        {% if form.file.errors %}
+                            <div class="alert alert-danger mt-2">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Error en archivos:</strong>
+                                <ul class="mb-0 mt-2">
+                                    {% for error in form.file.errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                        <div class="form-text">{{ form.file.help_text }}</div>
+                        
+                        <!-- Información del archivo seleccionado -->
+                        <div id="selectedFile" class="mt-2" style="display: none;">
+                            <h6><i class="fas fa-file"></i> Archivo Seleccionado:</h6>
+                            <div id="fileInfo" class="alert alert-info"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.league.id_for_label }}" class="form-label">
+                            <i class="fas fa-trophy"></i> {{ form.league.label }}
+                        </label>
+                        {{ form.league }}
+                        {% if form.league.errors %}
+                            <div class="alert alert-warning mt-2">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Atención:</strong>
+                                <ul class="mb-0 mt-2">
+                                    {% for error in form.league.errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                        <div class="form-text">{{ form.league.help_text }}</div>
+                    </div>
+                    
+                    <div class="mb-3" id="customLeagueDiv" style="display: none;">
+                        <label for="{{ form.league_name.id_for_label }}" class="form-label">
+                            <i class="fas fa-edit"></i> {{ form.league_name.label }}
+                        </label>
+                        {{ form.league_name }}
+                        {% if form.league_name.errors %}
+                            <div class="alert alert-warning mt-2">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Atención:</strong>
+                                <ul class="mb-0 mt-2">
+                                    {% for error in form.league_name.errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                        <div class="form-text">{{ form.league_name.help_text }}</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.season.id_for_label }}" class="form-label">
+                            <i class="fas fa-calendar"></i> {{ form.season.label }}
+                        </label>
+                        {{ form.season }}
+                        {% if form.season.errors %}
+                            <div class="alert alert-info mt-2">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>Información:</strong>
+                                <ul class="mb-0 mt-2">
+                                    {% for error in form.season.errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                        <div class="form-text">{{ form.season.help_text }}</div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100" id="submitBtn">
+                        <i class="fas fa-upload"></i> Cargar y Importar Archivos
+                    </button>
+                </form>
+                
+                <!-- Información del archivo seleccionado -->
+                <div id="fileSummary" class="file-info mt-3" style="display: none;">
+                    <h6><i class="fas fa-info-circle"></i> Resumen del Archivo</h6>
+                    <div id="fileDetails"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Archivos Importados -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-history"></i> Archivos Importados Recientemente</h5>
+                {% if imported_files %}
+                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                            onclick="confirmDeleteAllFiles()" 
+                            title="Eliminar todos los archivos y datos">
+                        <i class="fas fa-trash-alt"></i> Eliminar Todo
+                    </button>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if imported_files %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Archivo</th>
+                                    <th>Liga</th>
+                                    <th>Partidos</th>
+                                    <th>Fecha</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in imported_files %}
+                                <tr>
+                                    <td>
+                                        <i class="fas fa-file-excel text-success"></i>
+                                        {{ file.name|truncatechars:20 }}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ file.league.name }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ file.imported_rows }}</span>
+                                        {% if file.failed_rows > 0 %}
+                                            <span class="badge bg-warning">{{ file.failed_rows }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ file.imported_at|date:"d/m/Y H:i" }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                onclick="confirmDeleteFile({{ file.id }}, '{{ file.name }}')"
+                                                title="Eliminar archivo y sus datos">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay archivos importados aún.</p>
+                        <p class="text-muted">Carga tu primer archivo Excel usando el formulario.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Información sobre el formato -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Formato de Archivo Requerido</h5>
+            </div>
+            <div class="card-body">
+                <p>Los archivos CSV o Excel deben tener las siguientes columnas (formato Football-Data.co.uk):</p>
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6>Información Básica</h6>
+                        <ul class="list-unstyled">
+                            <li><code>Div</code> - División</li>
+                            <li><code>Date</code> - Fecha</li>
+                            <li><code>Time</code> - Hora</li>
+                            <li><code>HomeTeam</code> - Equipo Local</li>
+                            <li><code>AwayTeam</code> - Equipo Visitante</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Resultados</h6>
+                        <ul class="list-unstyled">
+                            <li><code>FTHG</code> - Goles Local (FT)</li>
+                            <li><code>FTAG</code> - Goles Visitante (FT)</li>
+                            <li><code>FTR</code> - Resultado Final</li>
+                            <li><code>HTHG</code> - Goles Local (HT)</li>
+                            <li><code>HTAG</code> - Goles Visitante (HT)</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Cuotas Principales</h6>
+                        <ul class="list-unstyled">
+                            <li><code>B365H/B365D/B365A</code> - Bet365</li>
+                            <li><code>BWH/BWD/BWA</code> - Blue Square</li>
+                            <li><code>IWH/IWD/IWA</code> - Interwetten</li>
+                            <li><code>PSH/PSD/PSA</code> - Pinnacle</li>
+                            <li><code>WHH/WHD/WHA</code> - William Hill</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="alert alert-warning mt-3">
+                    <strong>Nota:</strong> No todas las columnas son obligatorias. El sistema importará 
+                    los datos disponibles y marcará como nulos los campos faltantes.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Resaltar campos con errores
+    document.addEventListener('DOMContentLoaded', function() {
+        // Agregar clase 'is-invalid' a campos con errores
+        const errorFields = document.querySelectorAll('.alert-danger, .alert-warning');
+        errorFields.forEach(function(alert) {
+            const fieldContainer = alert.closest('.mb-3');
+            if (fieldContainer) {
+                const input = fieldContainer.querySelector('.form-control, .form-select');
+                if (input) {
+                    input.classList.add('is-invalid');
+                }
+            }
+        });
+        
+        // Remover clase 'is-invalid' cuando el usuario modifique el campo
+        const formInputs = document.querySelectorAll('.form-control, .form-select');
+        formInputs.forEach(function(input) {
+            input.addEventListener('input', function() {
+                this.classList.remove('is-invalid');
+                const alert = this.closest('.mb-3').querySelector('.alert');
+                if (alert) {
+                    alert.style.display = 'none';
+                }
+            });
+        });
+    });
+    
+    // Mostrar información del archivo seleccionado
+    document.getElementById('dataFiles').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const selectedFileDiv = document.getElementById('selectedFile');
+        const fileInfoDiv = document.getElementById('fileInfo');
+        const fileSummary = document.getElementById('fileSummary');
+        const fileDetails = document.getElementById('fileDetails');
+        
+        if (file) {
+            const fileSize = (file.size / 1024 / 1024).toFixed(2);
+            const fileType = file.name.toLowerCase().endsWith('.csv') ? 'CSV' : 'Excel';
+            const lastModified = new Date(file.lastModified).toLocaleDateString('es-ES');
+            
+            // Mostrar información del archivo seleccionado
+            fileInfoDiv.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-file-${fileType.toLowerCase()} text-success me-2"></i>
+                        <strong>${file.name}</strong>
+                        <br>
+                        <small class="text-muted">
+                            ${fileSize} MB • ${fileType} • ${lastModified}
+                        </small>
+                    </div>
+                    <span class="badge bg-primary rounded-pill">Listo</span>
+                </div>
+            `;
+            
+            selectedFileDiv.style.display = 'block';
+            
+            // Mostrar resumen
+            fileDetails.innerHTML = `
+                <div class="row">
+                    <div class="col-6">
+                        <strong>Archivo:</strong><br>
+                        <small class="text-muted">${file.name}</small>
+                    </div>
+                    <div class="col-6">
+                        <strong>Tamaño:</strong><br>
+                        <small class="text-muted">${fileSize} MB</small>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-6">
+                        <strong>Tipo:</strong><br>
+                        <small class="text-muted">${fileType}</small>
+                    </div>
+                    <div class="col-6">
+                        <strong>Modificado:</strong><br>
+                        <small class="text-muted">${lastModified}</small>
+                    </div>
+                </div>
+            `;
+            
+            fileSummary.style.display = 'block';
+        } else {
+            selectedFileDiv.style.display = 'none';
+            fileSummary.style.display = 'none';
+        }
+    });
+    
+    // Mostrar/ocultar campo de liga personalizada
+    document.getElementById('leagueSelect').addEventListener('change', function(e) {
+        const customLeagueDiv = document.getElementById('customLeagueDiv');
+        const leagueNameField = document.getElementById('leagueName');
+        
+        if (e.target.value === 'Other') {
+            customLeagueDiv.style.display = 'block';
+            leagueNameField.required = true;
+        } else {
+            customLeagueDiv.style.display = 'none';
+            leagueNameField.required = false;
+            leagueNameField.value = '';
+        }
+    });
+    
+    // Mostrar progreso durante la carga
+    document.getElementById('importForm').addEventListener('submit', function(e) {
+        const submitBtn = document.getElementById('submitBtn');
+        const originalText = submitBtn.innerHTML;
+        const files = document.getElementById('dataFiles').files;
+        
+        // Validar que hay archivo seleccionado
+        if (files.length === 0) {
+            e.preventDefault();
+            alert('⚠️ Debe seleccionar un archivo para importar');
+            return false;
+        }
+        
+        // Validar que hay liga seleccionada
+        const leagueSelect = document.getElementById('leagueSelect');
+        if (!leagueSelect.value) {
+            e.preventDefault();
+            alert('⚠️ Debe seleccionar una liga de la lista');
+            return false;
+        }
+        
+        // Validar liga personalizada si es necesaria
+        if (leagueSelect.value === 'Other') {
+            const leagueName = document.getElementById('leagueName');
+            if (!leagueName.value.trim()) {
+                e.preventDefault();
+                alert('⚠️ Debe especificar el nombre de la liga personalizada');
+                return false;
+            }
+        }
+        
+        console.log('Enviando formulario con archivo:', files[0].name);
+        
+        submitBtn.innerHTML = `
+            <span class="spinner-border spinner-border-sm me-2" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </span>
+            Procesando archivo...
+        `;
+        submitBtn.disabled = true;
+        
+        // Restaurar botón después de 60 segundos (timeout de seguridad)
+        setTimeout(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }, 60000);
+    });
+    
+    // Función para confirmar eliminación de archivo
+    function confirmDeleteFile(fileId, fileName) {
+        if (confirm(`⚠️ ¿Estás seguro de que quieres eliminar el archivo "${fileName}"?\n\nEsto eliminará:\n- El archivo y su registro\n- Todos los partidos importados de este archivo\n- La liga asociada (si no tiene más partidos)\n\nEsta acción NO se puede deshacer.`)) {
+            // Crear formulario para enviar POST
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `{% url 'football_data:delete_file' 0 %}`.replace('0', fileId);
+            
+            // Agregar token CSRF
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken;
+            form.appendChild(csrfInput);
+            
+            // Agregar al DOM y enviar
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+    
+    // Función para confirmar eliminación de todos los archivos
+    function confirmDeleteAllFiles() {
+        if (confirm(`🚨 ¿Estás seguro de que quieres eliminar TODOS los archivos?\n\nEsto eliminará:\n- Todos los archivos importados\n- Todos los partidos de la base de datos\n- Todas las ligas\n- Todos los datos históricos\n\nEsta acción NO se puede deshacer.`)) {
+            // Crear formulario para enviar POST
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `{% url 'football_data:delete_all_files' %}`;
+            
+            // Agregar token CSRF
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken;
+            form.appendChild(csrfInput);
+            
+            // Agregar al DOM y enviar
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+</script>
+{% endblock %}

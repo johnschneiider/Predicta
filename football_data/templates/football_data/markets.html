@@ -1,0 +1,280 @@
+{% extends 'base.html' %}
+
+{% block title %}Análisis de Mercados - Datos Históricos de Fútbol{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-chart-pie"></i> Análisis de Mercados</h1>
+            <a href="{% url 'football_data:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-filter"></i> Filtros</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="league" class="form-label">Liga</label>
+                        <select class="form-select" id="league" name="league">
+                            <option value="">Todas las ligas</option>
+                            {% for league in leagues %}
+                            <option value="{{ league.id }}" {% if current_league == league.id|stringformat:"s" %}selected{% endif %}>
+                                {{ league.name }} ({{ league.match_count }} partidos)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_from" class="form-label">Fecha Desde</label>
+                        <input type="date" class="form-control" id="date_from" name="date_from" value="{{ date_from }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_to" class="form-label">Fecha Hasta</label>
+                        <input type="date" class="form-control" id="date_to" name="date_to" value="{{ date_to }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search"></i> Filtrar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mercados -->
+{% for market_key, market_data in markets_data.items %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> {{ market_data.title }}</h5>
+                <p class="mb-0 text-muted">{{ market_data.description }}</p>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for chart_key, chart_data in market_data.charts.items %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6>{{ chart_data.title }}</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="{{ market_key }}_{{ chart_key }}" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Resumen de Mercados -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Resumen de Mercados</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i class="fas fa-trophy fa-3x text-primary mb-2"></i>
+                            <h6>Mercado 1X2</h6>
+                            <p class="text-muted">Análisis de resultados y cuotas principales</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i class="fas fa-futbol fa-3x text-success mb-2"></i>
+                            <h6>Over/Under 2.5</h6>
+                            <p class="text-muted">Análisis de goles y mercados de totales</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i class="fas fa-chart-line fa-3x text-info mb-2"></i>
+                            <h6>Estadísticas</h6>
+                            <p class="text-muted">Corners, tarjetas y handicap asiático</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i class="fas fa-chart-pie fa-3x text-warning mb-2"></i>
+                            <h6>Distribuciones</h6>
+                            <p class="text-muted">Análisis de patrones y tendencias</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Datos de los mercados
+    const marketsData = {{ markets_data|safe }};
+    
+    // Colores para las gráficas
+    const colors = {
+        primary: '#007bff',
+        success: '#28a745',
+        info: '#17a2b8',
+        warning: '#ffc107',
+        danger: '#dc3545',
+        secondary: '#6c757d',
+        light: '#f8f9fa',
+        dark: '#343a40'
+    };
+    
+    // Función para crear gráfica de pastel
+    function createPieChart(canvasId, data, title) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: data.map(item => item.label),
+                datasets: [{
+                    data: data.map(item => item.value),
+                    backgroundColor: [
+                        colors.primary,
+                        colors.success,
+                        colors.info,
+                        colors.warning,
+                        colors.danger,
+                        colors.secondary
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: title
+                    },
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    // Función para crear gráfica de barras
+    function createBarChart(canvasId, data, title) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(item => item.label),
+                datasets: [{
+                    label: title,
+                    data: data.map(item => item.value),
+                    backgroundColor: colors.primary,
+                    borderColor: colors.primary,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: title
+                    },
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // Función para crear gráfica de línea
+    function createLineChart(canvasId, data, title) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(item => item.x),
+                datasets: [{
+                    label: title,
+                    data: data.map(item => item.y),
+                    borderColor: colors.primary,
+                    backgroundColor: colors.primary + '20',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: title
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // Crear todas las gráficas
+    document.addEventListener('DOMContentLoaded', function() {
+        // Iterar sobre cada mercado
+        Object.keys(marketsData).forEach(marketKey => {
+            const market = marketsData[marketKey];
+            
+            // Iterar sobre cada gráfica del mercado
+            Object.keys(market.charts).forEach(chartKey => {
+                const chart = market.charts[chartKey];
+                const canvasId = `${marketKey}_${chartKey}`;
+                
+                // Crear la gráfica según el tipo
+                if (chart.type === 'pie') {
+                    createPieChart(canvasId, chart.data, chart.title);
+                } else if (chart.type === 'bar') {
+                    createBarChart(canvasId, chart.data, chart.title);
+                } else if (chart.type === 'line') {
+                    createLineChart(canvasId, chart.data, chart.title);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Análisis de Remates{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filters-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-bullseye"></i> Análisis de Remates
+            </h1>
+            
+            <!-- Filtros -->
+            <div class="filters-section">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="league" class="form-label">Liga:</label>
+                        <select name="league" id="league" class="form-select">
+                            <option value="">Todas las ligas</option>
+                            {% for league in leagues %}
+                                <option value="{{ league.id }}" {% if league.id|stringformat:"s" == current_league %}selected{% endif %}>
+                                    {{ league.name }} ({{ league.match_count }} partidos)
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_from" class="form-label">Desde:</label>
+                        <input type="date" name="date_from" id="date_from" class="form-control" value="{{ date_from }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_to" class="form-label">Hasta:</label>
+                        <input type="date" name="date_to" id="date_to" class="form-control" value="{{ date_to }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> Filtrar
+                            </button>
+                            <a href="{% url 'football_data:shots' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Limpiar
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Mensaje informativo -->
+            <div class="alert alert-info">
+                <h4><i class="fas fa-info-circle"></i> Análisis de Remates</h4>
+                <p>Esta página está en desarrollo. Las gráficas de remates se implementarán próximamente.</p>
+                <p><strong>Partidos encontrados:</strong> {{ matches_count }}</p>
+                <p>Por ahora, puedes usar la página de <a href="{% url 'football_data:statistics' %}">Estadísticas</a> para ver los datos generales.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Página simplificada - sin gráficas por ahora
+    console.log('Página de análisis de remates cargada');
+</script>
+{% endblock %}
+

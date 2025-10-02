@@ -1,0 +1,25 @@
+# Django Configuration
+SECRET_KEY=your-django-secret-key-here
+
+# The Odds API Configuration
+ODDS_API_KEY=your_odds_api_key_here
+
+# Betfair API Configuration
+BETFAIR_APP_KEY=your_betfair_app_key_here
+BETFAIR_USERNAME=your_betfair_username_here
+BETFAIR_PASSWORD=your_betfair_password_here
+BETFAIR_SANDBOX=True
+
+# Bot Configuration
+SPORT_KEY=soccer_epl
+REGIONS=uk,us,eu
+MARKETS=h2h
+ODDS_FORMAT=decimal
+
+# Betting Configuration
+MIN_STAKE=1.0
+MAX_STAKE=10.0
+MIN_EDGE=0.05
+
+# Execution Configuration
+EXECUTION_INTERVAL=10

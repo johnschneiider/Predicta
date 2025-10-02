@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ match.home_team }} vs {{ match.away_team }} - Bot de Apuestas{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>
+                <i class="fas fa-futbol text-primary"></i>
+                {{ match.home_team }} vs {{ match.away_team }}
+            </h1>
+            <a href="{% url 'odds:matches_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Información del Partido -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Información del Partido</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>Deporte:</strong><br>
+                        <span class="badge bg-secondary">{{ match.sport.title }}</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Fecha y Hora:</strong><br>
+                        {{ match.commence_time|date:"d/m/Y H:i" }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Equipo Local:</strong><br>
+                        <span class="text-primary">{{ match.home_team }}</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Equipo Visitante:</strong><br>
+                        <span class="text-info">{{ match.away_team }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cuotas Promedio -->
+{% if latest_average %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-line"></i> Cuotas Promedio Actuales</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <h6>Local</h6>
+                                <h2>{{ latest_average.avg_home_odds|floatformat:2 }}</h2>
+                                <small>{{ match.home_team }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-warning text-dark">
+                            <div class="card-body">
+                                <h6>Empate</h6>
+                                <h2>{{ latest_average.avg_draw_odds|floatformat:2 }}</h2>
+                                <small>Empate</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <h6>Visitante</h6>
+                                <h2>{{ latest_average.avg_away_odds|floatformat:2 }}</h2>
+                                <small>{{ match.away_team }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12 text-center">
+                        <small class="text-muted">
+                            Basado en {{ latest_average.bookmaker_count }} casas de apuestas | 
+                            Calculado {{ latest_average.calculated_at|timesince }} atrás
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Cuotas por Casa de Apuestas -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-list"></i> Cuotas por Casa de Apuestas</h5>
+            </div>
+            <div class="card-body">
+                {% if odds_by_bookmaker %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Casa de Apuestas</th>
+                                    <th class="text-center">Local</th>
+                                    <th class="text-center">Empate</th>
+                                    <th class="text-center">Visitante</th>
+                                    <th class="text-center">Última Actualización</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bookmaker_name, bookmaker_data in odds_by_bookmaker.items %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ bookmaker_data.bookmaker.title }}</strong>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if bookmaker_data.odds.home_odds %}
+                                            <span class="odds-value text-primary">
+                                                {{ bookmaker_data.odds.home_odds|floatformat:2 }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if bookmaker_data.odds.draw_odds %}
+                                            <span class="odds-value text-warning">
+                                                {{ bookmaker_data.odds.draw_odds|floatformat:2 }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if bookmaker_data.odds.away_odds %}
+                                            <span class="odds-value text-info">
+                                                {{ bookmaker_data.odds.away_odds|floatformat:2 }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <small class="text-muted">
+                                            {{ bookmaker_data.timestamp|timesince }} atrás
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                        <p class="text-muted">No hay cuotas disponibles para este partido.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Historial de Cuotas Promedio -->
+{% if average_history %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-history"></i> Historial de Cuotas Promedio</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th class="text-center">Local</th>
+                                <th class="text-center">Empate</th>
+                                <th class="text-center">Visitante</th>
+                                <th class="text-center">Casas</th>
+                                <th class="text-center">Desv. Est.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for avg in average_history %}
+                            <tr>
+                                <td>
+                                    {{ avg.calculated_at|date:"d/m/Y H:i" }}
+                                </td>
+                                <td class="text-center">
+                                    <span class="text-primary">{{ avg.avg_home_odds|floatformat:2 }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="text-warning">{{ avg.avg_draw_odds|floatformat:2 }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="text-info">{{ avg.avg_away_odds|floatformat:2 }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary">{{ avg.bookmaker_count }}</span>
+                                </td>
+                                <td class="text-center">
+                                    {% if avg.standard_deviation %}
+                                        <small class="text-muted">{{ avg.standard_deviation|floatformat:3 }}</small>
+                                    {% else %}
+                                        <small class="text-muted">-</small>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Gráfico de evolución (placeholder) -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-area"></i> Evolución de Cuotas</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">
+                        Gráfico de evolución de cuotas (funcionalidad futura)
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

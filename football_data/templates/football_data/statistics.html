@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Estadísticas{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 15px;
+        transition: transform 0.3s ease;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stats-card .card-body {
+        padding: 2rem;
+    }
+    
+    .stats-card h3 {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stats-card p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .section-title {
+        color: #333;
+        font-weight: bold;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 3px solid #007bff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-chart-bar"></i> Estadísticas Generales
+            </h1>
+        </div>
+    </div>
+    
+    <!-- Estadísticas Principales -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-futbol fa-3x mb-3"></i>
+                    <h3>{{ stats.total_matches }}</h3>
+                    <p>Partidos Totales</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-trophy fa-3x mb-3"></i>
+                    <h3>{{ stats.total_leagues }}</h3>
+                    <p>Ligas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-excel fa-3x mb-3"></i>
+                    <h3>{{ stats.total_files }}</h3>
+                    <p>Archivos Importados</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar fa-3x mb-3"></i>
+                    <h3>{{ stats.date_range }}</h3>
+                    <p>Rango de Fechas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Estadísticas por Liga -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="chart-container">
+                <h3 class="section-title">
+                    <i class="fas fa-trophy"></i> Estadísticas por Liga
+                </h3>
+                {% if leagues_stats %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Liga</th>
+                                    <th>Partidos</th>
+                                    <th>Promedio Goles/Partido</th>
+                                    <th>Promedio Remates/Partido</th>
+                                    <th>Último Partido</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for league in leagues_stats %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ league.name }}</strong>
+                                        <br><small class="text-muted">{{ league.season }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ league.match_count }}</span>
+                                    </td>
+                                    <td>{{ league.avg_goals|floatformat:2 }}</td>
+                                    <td>{{ league.avg_shots|floatformat:2 }}</td>
+                                    <td>{{ league.latest_match|date:"d/m/Y" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay estadísticas de ligas disponibles.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Estadísticas de Goles -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h3 class="section-title">
+                    <i class="fas fa-futbol"></i> Distribución de Goles
+                </h3>
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h4 class="text-primary">{{ stats.avg_goals_per_match|floatformat:2 }}</h4>
+                            <p>Goles por Partido</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h4 class="text-success">{{ stats.avg_home_goals|floatformat:2 }}</h4>
+                            <p>Goles Local</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h4 class="text-info">{{ stats.avg_away_goals|floatformat:2 }}</h4>
+                            <p>Goles Visitante</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h4 class="text-warning">{{ stats.over_25_percentage|floatformat:1 }}%</h4>
+                            <p>Over 2.5 Goles</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h3 class="section-title">
+                    <i class="fas fa-bullseye"></i> Estadísticas de Remates
+                </h3>
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h4 class="text-primary">{{ stats.avg_shots_per_match|floatformat:2 }}</h4>
+                            <p>Remates por Partido</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h4 class="text-success">{{ stats.avg_shots_target|floatformat:2 }}</h4>
+                            <p>Remates a Puerta</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h4 class="text-info">{{ stats.shots_effectiveness|floatformat:1 }}%</h4>
+                            <p>Efectividad</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h4 class="text-warning">{{ stats.avg_corners|floatformat:2 }}</h4>
+                            <p>Corners por Partido</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Acciones Rápidas -->
+    <div class="row">
+        <div class="col-12">
+            <div class="chart-container">
+                <h3 class="section-title">
+                    <i class="fas fa-rocket"></i> Acciones Rápidas
+                </h3>
+                <div class="row">
+                    <div class="col-md-3">
+                        <a href="{% url 'football_data:shots' %}" class="btn btn-danger btn-lg w-100 mb-3">
+                            <i class="fas fa-bullseye"></i> Análisis de Remates
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'football_data:markets' %}" class="btn btn-warning btn-lg w-100 mb-3">
+                            <i class="fas fa-chart-pie"></i> Análisis de Mercados
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'football_data:import' %}" class="btn btn-primary btn-lg w-100 mb-3">
+                            <i class="fas fa-upload"></i> Importar Datos
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'odds:dashboard' %}" class="btn btn-info btn-lg w-100 mb-3">
+                            <i class="fas fa-chart-line"></i> Cuotas API
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Animación de contadores
+    function animateCounters() {
+        const counters = document.querySelectorAll('.stats-card h3');
+        counters.forEach(counter => {
+            const target = parseInt(counter.textContent);
+            let current = 0;
+            const increment = target / 50;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    counter.textContent = target;
+                    clearInterval(timer);
+                } else {
+                    counter.textContent = Math.floor(current);
+                }
+            }, 30);
+        });
+    }
+    
+    // Inicializar animaciones
+    document.addEventListener('DOMContentLoaded', function() {
+        animateCounters();
+    });
+</script>
+{% endblock %}
+

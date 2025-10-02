@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tabla de Datos por Liga{% endblock %}
+
+{% block extra_css %}
+<style>
+    .league-selector {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+    
+    .table-container {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .table {
+        font-size: 0.9em;
+    }
+    
+    .table th {
+        background-color: #007bff;
+        color: white;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+    }
+    
+    .table td {
+        text-align: center;
+        vertical-align: middle;
+    }
+    
+    .table tbody tr:hover {
+        background-color: #f5f5f5;
+    }
+    
+    .pagination {
+        margin-top: 20px;
+    }
+    
+    .league-info {
+        background: #e3f2fd;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    
+    .no-data {
+        text-align: center;
+        padding: 40px;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-table"></i> Tabla de Datos por Liga
+            </h1>
+            
+            <!-- Selector de Liga -->
+            <div class="league-selector">
+                <form method="get" class="row g-3">
+                    <div class="col-md-8">
+                        <label for="league" class="form-label">Seleccionar Liga:</label>
+                        <select name="league" id="league" class="form-select" onchange="this.form.submit()">
+                            <option value="">-- Seleccionar una liga --</option>
+                            {% for league in leagues %}
+                                <option value="{{ league.id }}" {% if league.id|stringformat:"s" == league_id %}selected{% endif %}>
+                                    {{ league.name }} ({{ league.match_count }} partidos)
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Ver Datos
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            {% if selected_league %}
+                <!-- Información de la Liga -->
+                <div class="league-info">
+                    <h4><i class="fas fa-trophy"></i> {{ selected_league.name }}</h4>
+                    <p class="mb-0">
+                        <strong>País:</strong> {{ selected_league.country }} | 
+                        <strong>Temporada:</strong> {{ selected_league.season }} | 
+                        <strong>Total de partidos:</strong> {{ selected_league.matches.count }}
+                    </p>
+                </div>
+                
+                {% if matches %}
+                    <!-- Tabla de Datos -->
+                    <div class="table-container">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Hora</th>
+                                        <th>Local</th>
+                                        <th>Visitante</th>
+                                        <th>Goles L</th>
+                                        <th>Goles V</th>
+                                        <th>Resultado</th>
+                                        <th>Remates L</th>
+                                        <th>Remates V</th>
+                                        <th>Remates a Puerta L</th>
+                                        <th>Remates a Puerta V</th>
+                                        <th>Faltas L</th>
+                                        <th>Faltas V</th>
+                                        <th>Tarjetas L</th>
+                                        <th>Tarjetas V</th>
+                                        <th>Esquinas L</th>
+                                        <th>Esquinas V</th>
+                                        <th>B365 Local</th>
+                                        <th>B365 Empate</th>
+                                        <th>B365 Visitante</th>
+                                        <th>Max Local</th>
+                                        <th>Max Empate</th>
+                                        <th>Max Visitante</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for match in matches %}
+                                    <tr>
+                                        <td>{{ match.date|date:"d/m/Y" }}</td>
+                                        <td>{{ match.time|time:"H:i" }}</td>
+                                        <td><strong>{{ match.home_team }}</strong></td>
+                                        <td><strong>{{ match.away_team }}</strong></td>
+                                        <td>{{ match.fthg|default:"-" }}</td>
+                                        <td>{{ match.ftag|default:"-" }}</td>
+                                        <td>
+                                            {% if match.ftr == 'H' %}
+                                                <span class="badge bg-success">Local</span>
+                                            {% elif match.ftr == 'A' %}
+                                                <span class="badge bg-danger">Visitante</span>
+                                            {% elif match.ftr == 'D' %}
+                                                <span class="badge bg-warning">Empate</span>
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ match.hs|default:"-" }}</td>
+                                        <td>{{ match.as_field|default:"-" }}</td>
+                                        <td>{{ match.hst|default:"-" }}</td>
+                                        <td>{{ match.ast|default:"-" }}</td>
+                                        <td>{{ match.hf|default:"-" }}</td>
+                                        <td>{{ match.af|default:"-" }}</td>
+                                        <td>{{ match.hy|default:"-" }}</td>
+                                        <td>{{ match.ay|default:"-" }}</td>
+                                        <td>{{ match.hc|default:"-" }}</td>
+                                        <td>{{ match.ac|default:"-" }}</td>
+                                        <td>{{ match.b365h|default:"-" }}</td>
+                                        <td>{{ match.b365d|default:"-" }}</td>
+                                        <td>{{ match.b365a|default:"-" }}</td>
+                                        <td>{{ match.maxh|default:"-" }}</td>
+                                        <td>{{ match.maxd|default:"-" }}</td>
+                                        <td>{{ match.maxa|default:"-" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Paginación -->
+                        {% if matches.has_other_pages %}
+                        <nav aria-label="Paginación de partidos">
+                            <ul class="pagination justify-content-center">
+                                {% if matches.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?league={{ league_id }}&page={{ matches.previous_page_number }}">
+                                            <i class="fas fa-chevron-left"></i> Anterior
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for num in matches.paginator.page_range %}
+                                    {% if matches.number == num %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ num }}</span>
+                                        </li>
+                                    {% elif num > matches.number|add:'-3' and num < matches.number|add:'3' %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?league={{ league_id }}&page={{ num }}">{{ num }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if matches.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?league={{ league_id }}&page={{ matches.next_page_number }}">
+                                            Siguiente <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="no-data">
+                        <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                        <h4>No hay datos disponibles</h4>
+                        <p>No se encontraron partidos para esta liga.</p>
+                        <a href="{% url 'football_data:import' %}" class="btn btn-primary">
+                            <i class="fas fa-upload"></i> Importar Datos
+                        </a>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="no-data">
+                    <i class="fas fa-mouse-pointer fa-3x mb-3"></i>
+                    <h4>Selecciona una Liga</h4>
+                    <p>Elige una liga del menú desplegable para ver los datos de los partidos.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-submit cuando se selecciona una liga
+    document.getElementById('league').addEventListener('change', function() {
+        if (this.value) {
+            this.form.submit();
+        }
+    });
+</script>
+{% endblock %}

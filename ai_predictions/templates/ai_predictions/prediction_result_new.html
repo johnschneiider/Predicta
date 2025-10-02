@@ -1,0 +1,474 @@
+{% extends 'base.html' %}
+
+{% block title %}Resultado de Predicción - IA{% endblock %}
+
+{% block extra_css %}
+<style>
+    .result-header {
+        background: #2c3e50;
+        border-left: 5px solid #3498db;
+        padding: 25px 30px;
+        color: white;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .result-header h2 {
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    
+    .result-header p {
+        font-size: 0.95rem;
+        color: #ecf0f1;
+        margin: 0;
+    }
+    
+    .predictions-table {
+        background: white;
+        padding: 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border: 1px solid #e0e0e0;
+        overflow-x: auto;
+    }
+    
+    .table-predictions {
+        width: 100%;
+        min-width: 1200px;
+        margin: 0;
+        border-collapse: collapse;
+    }
+    
+    .table-predictions thead tr:first-child th {
+        background: #34495e;
+        color: white;
+        padding: 15px 12px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-right: 1px solid #2c3e50;
+    }
+    
+    .table-predictions thead tr:first-child th:last-child {
+        border-right: none;
+    }
+    
+    .table-predictions thead tr:nth-child(2) th {
+        background: #ecf0f1;
+        color: #2c3e50;
+        padding: 10px 8px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.8rem;
+        border-right: 1px solid #d5d8dc;
+        border-bottom: 2px solid #34495e;
+    }
+    
+    .table-predictions thead tr:nth-child(2) th:first-child {
+        background: white;
+        border-right: 1px solid #d5d8dc;
+    }
+    
+    .table-predictions tbody td {
+        padding: 14px 12px;
+        text-align: center;
+        border-bottom: 1px solid #e8e8e8;
+        border-right: 1px solid #f0f0f0;
+        vertical-align: middle;
+        font-size: 0.95rem;
+    }
+    
+    .table-predictions tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .table-predictions tbody tr:nth-child(even) {
+        background-color: #fafafa;
+    }
+    
+    .table-predictions tbody tr:nth-child(even):hover {
+        background-color: #f8f9fa;
+    }
+    
+    .model-name {
+        font-weight: 600;
+        color: #2c3e50;
+        text-align: left !important;
+        padding-left: 20px !important;
+        font-size: 1rem;
+        border-right: 2px solid #d5d8dc !important;
+    }
+    
+    .prediction-value {
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .confidence-badge {
+        padding: 4px 10px;
+        border-radius: 3px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        border: 1px solid;
+    }
+    
+    .confidence-high {
+        background-color: #d4edda;
+        color: #155724;
+        border-color: #c3e6cb;
+    }
+    
+    .confidence-medium {
+        background-color: #fff3cd;
+        color: #856404;
+        border-color: #ffeaa7;
+    }
+    
+    .confidence-low {
+        background-color: #f8d7da;
+        color: #721c24;
+        border-color: #f5c6cb;
+    }
+    
+    .action-buttons {
+        text-align: center;
+        margin-top: 30px;
+        padding: 20px 0;
+    }
+    
+    .btn-action {
+        margin: 5px;
+        border-radius: 4px;
+        padding: 10px 25px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.85rem;
+        border: 1px solid;
+    }
+    
+    .btn-primary {
+        background-color: #3498db;
+        border-color: #3498db;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background-color: #2980b9;
+        border-color: #2980b9;
+    }
+    
+    .btn-secondary {
+        background-color: #95a5a6;
+        border-color: #95a5a6;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background-color: #7f8c8d;
+        border-color: #7f8c8d;
+    }
+    
+    .table-title {
+        background: #f8f9fa;
+        padding: 20px;
+        border-bottom: 2px solid #34495e;
+    }
+    
+    .table-title h4 {
+        margin: 0;
+        color: #2c3e50;
+        font-weight: 600;
+        font-size: 1.3rem;
+    }
+    
+    .info-card {
+        background: white;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .info-card .card-header {
+        background: #f8f9fa;
+        border-bottom: 2px solid #e0e0e0;
+        padding: 15px 20px;
+    }
+    
+    .info-card .card-header h5 {
+        margin: 0;
+        color: #2c3e50;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="result-header">
+                <div class="text-center">
+                    <h2 class="mb-2">
+                        <i class="fas fa-futbol"></i> 
+                        {{ prediction.home_team }} vs {{ prediction.away_team }}
+                    </h2>
+                    <p class="mb-0">
+                        <i class="fas fa-trophy"></i> {{ prediction.league }}
+                    </p>
+                    <p class="mt-2 mb-0">
+                        <small>Análisis Multi-Modelo Completo</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Info -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h6><i class="fas fa-chart-line"></i> Modelo Oficial:</h6>
+                <p><strong>Ensemble Average:</strong> Modelo que combina múltiples algoritmos estadísticos para proporcionar la predicción más precisa y confiable.</p>
+                <p><strong>Tipos de predicción disponibles:</strong> {{ prediction.all_predictions.keys|join:", " }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Predicciones -->
+    <div class="row">
+        <div class="col-12">
+            <div class="predictions-table">
+                <div class="table-title">
+                    <h4>
+                        <i class="fas fa-chart-line"></i> Predicciones del Modelo Oficial
+                    </h4>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-predictions table-hover">
+                        <thead>
+                            <tr>
+                                <th>Modelo</th>
+                                <th colspan="3" class="category-header">Remates</th>
+                                <th colspan="3" class="category-header">Goles</th>
+                                <th colspan="3" class="category-header">Corners</th>
+                                <th class="category-header">Ambos Marcan</th>
+                            </tr>
+                            <tr class="category-header">
+                                <th style="background: white !important;"></th>
+                                <th>Total</th>
+                                <th>Local</th>
+                                <th>Visit.</th>
+                                <th>Total</th>
+                                <th>Local</th>
+                                <th>Visit.</th>
+                                <th>Total</th>
+                                <th>Local</th>
+                                <th>Visit.</th>
+                                <th>Probabilidad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for model_name in model_names %}
+                                {% if model_name == 'Ensemble Average' %}
+                            <tr>
+                                <td class="model-name">
+                                    {{ model_name }}
+                                    <br><small class="text-muted">Modelo Oficial</small>
+                                </td>
+                                <!-- Remates -->
+                                <td>
+                                    {% if prediction.all_predictions.shots_total %}
+                                        {% for pred in prediction.all_predictions.shots_total %}
+                                            {% if pred.model_name == model_name %}
+                                                <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
+                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if prediction.all_predictions.shots_home %}
+                                        {% for pred in prediction.all_predictions.shots_home %}
+                                            {% if pred.model_name == model_name %}
+                                                <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
+                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if prediction.all_predictions.shots_away %}
+                                        {% for pred in prediction.all_predictions.shots_away %}
+                                            {% if pred.model_name == model_name %}
+                                                <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
+                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <!-- Goles -->
+                                <td>
+                                    {% if prediction.all_predictions.goals_total %}
+                                        {% for pred in prediction.all_predictions.goals_total %}
+                                            {% if pred.model_name == model_name %}
+                                                <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
+                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if prediction.all_predictions.goals_home %}
+                                        {% for pred in prediction.all_predictions.goals_home %}
+                                            {% if pred.model_name == model_name %}
+                                                <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
+                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if prediction.all_predictions.goals_away %}
+                                        {% for pred in prediction.all_predictions.goals_away %}
+                                            {% if pred.model_name == model_name %}
+                                                <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
+                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <!-- Corners -->
+                                <td>
+                                    {% if prediction.all_predictions.corners_total %}
+                                        {% for pred in prediction.all_predictions.corners_total %}
+                                            {% if pred.model_name == model_name %}
+                                                <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
+                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if prediction.all_predictions.corners_home %}
+                                        {% for pred in prediction.all_predictions.corners_home %}
+                                            {% if pred.model_name == model_name %}
+                                                <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
+                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if prediction.all_predictions.corners_away %}
+                                        {% for pred in prediction.all_predictions.corners_away %}
+                                            {% if pred.model_name == model_name %}
+                                                <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
+                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <!-- Ambos Marcan -->
+                                <td>
+                                    {% if prediction.all_predictions.both_teams_score %}
+                                        {% for pred in prediction.all_predictions.both_teams_score %}
+                                            {% if pred.model_name == model_name %}
+                                                {% if pred.probabilities.over_1 %}
+                                                    <span class="confidence-badge both-teams-score-prob {% if pred.probabilities.over_1 > 0.6 %}confidence-high{% elif pred.probabilities.over_1 > 0.4 %}confidence-medium{% else %}confidence-low{% endif %}" data-prob="{{ pred.probabilities.over_1|floatformat:3 }}">
+                                                        {{ pred.probabilities.over_1|floatformat:3 }}%
+                                                    </span>
+                                                    <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información adicional -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card info-card">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle"></i> Interpretación de Resultados</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Modelo Oficial - Ensemble Average:</strong></p>
+                    <ul>
+                        <li><strong>Algoritmo Avanzado:</strong> Combina múltiples modelos estadísticos para mayor precisión</li>
+                        <li><strong>Promedio Inteligente:</strong> Integra distribuciones de Poisson y promedios históricos</li>
+                        <li><strong>Mayor Confiabilidad:</strong> Reduce el sesgo individual de cada modelo</li>
+                        <li><strong>Predicción Robusta:</strong> Proporciona la estimación más precisa disponible</li>
+                    </ul>
+                    <p class="mt-3"><strong>Cómo usar las predicciones:</strong></p>
+                    <ul>
+                        <li>Los valores mostrados representan la predicción oficial del sistema</li>
+                        <li>Mayor confianza indica mayor precisión histórica del modelo</li>
+                        <li>Para "Ambos Marcan", valores >60% indican alta probabilidad</li>
+                        <li>Las predicciones se basan en análisis estadístico avanzado</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="action-buttons">
+        <a href="{% url 'ai_predictions:prediction_form' %}" class="btn btn-primary btn-action">
+            <i class="fas fa-plus"></i> Nueva Predicción
+        </a>
+        <a href="{% url 'ai_predictions:dashboard' %}" class="btn btn-secondary btn-action">
+            <i class="fas fa-home"></i> Dashboard
+        </a>
+    </div>
+</div>
+
+<script>
+// Convertir probabilidades a porcentajes
+document.addEventListener('DOMContentLoaded', function() {
+    const probElements = document.querySelectorAll('.both-teams-score-prob');
+    probElements.forEach(element => {
+        const prob = parseFloat(element.getAttribute('data-prob'));
+        element.textContent = (prob * 100).toFixed(1) + '%';
+    });
+});
+</script>
+
+{% endblock %}

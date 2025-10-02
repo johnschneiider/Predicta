@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Predicta - Sistema de Predicciones Deportivas{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --dark-bg: #34495e;
+            --light-bg: #ecf0f1;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--dark-bg) 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-top: 80px; /* Espacio para el header fijo */
+        }
+
+        /* Header Global */
+        .global-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(44, 62, 80, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            padding: 15px 0;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            color: white;
+            text-decoration: none;
+        }
+
+        .logo-section:hover {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        .logo-section h3 {
+            margin: 0;
+            font-weight: bold;
+            margin-left: 15px;
+        }
+
+        .logo-section i {
+            font-size: 2rem;
+            color: var(--accent-color);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* Botón Hamburguesa Global */
+        .global-hamburger {
+            background: var(--accent-color);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            color: white;
+            font-size: 20px;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .global-hamburger:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+            background: #c0392b;
+        }
+
+        /* Sidebar Global */
+        .global-sidebar {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100vh;
+            background: linear-gradient(180deg, var(--primary-color) 0%, var(--dark-bg) 100%);
+            transition: right 0.3s ease;
+            z-index: 999;
+            overflow-y: auto;
+        }
+
+        .global-sidebar.active {
+            right: 0;
+        }
+
+        .sidebar-header {
+            padding: 30px 25px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-header h4 {
+            color: white;
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: background 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .sidebar-menu {
+            padding: 20px 0;
+        }
+
+        .menu-section {
+            margin-bottom: 30px;
+        }
+
+        .menu-section-title {
+            color: var(--accent-color);
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 10px 25px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(231, 76, 60, 0.3);
+        }
+
+        .menu-item {
+            display: block;
+            padding: 15px 25px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .menu-item:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-left-color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        .menu-item.active {
+            background: rgba(231, 76, 60, 0.2);
+            color: white;
+            border-left-color: var(--accent-color);
+        }
+
+        .menu-item i {
+            width: 25px;
+            margin-right: 15px;
+            text-align: center;
+            color: var(--secondary-color);
+        }
+
+        /* Overlay */
+        .global-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 998;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .global-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Contenido Principal */
+        .main-content {
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Cards */
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            margin-bottom: 20px;
+        }
+
+        /* Botones */
+        .btn-primary {
+            background: linear-gradient(45deg, var(--secondary-color), #2980b9);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, var(--success-color), #229954);
+            border: none;
+            border-radius: 25px;
+        }
+
+        .btn-warning {
+            background: linear-gradient(45deg, var(--warning-color), #e67e22);
+            border: none;
+            border-radius: 25px;
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, var(--accent-color), #c0392b);
+            border: none;
+            border-radius: 25px;
+        }
+
+        /* Mensajes */
+        .alert {
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        /* Tablas */
+        .table {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+
+        /* Stats Cards */
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Odds styling */
+        .odds-value {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .positive { color: #28a745; }
+        .negative { color: #dc3545; }
+        .neutral { color: #6c757d; }
+
+        /* Live indicator */
+        .live-indicator {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .global-sidebar {
+                width: 100%;
+                right: -100%;
+            }
+            
+            .header-content {
+                padding: 0 15px;
+            }
+            
+            .logo-section h3 {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Header Global -->
+    <header class="global-header">
+        <div class="header-content">
+            <div class="d-flex justify-content-between align-items-center">
+                <!-- Logo -->
+                <a href="{% url 'odds:dashboard' %}" class="logo-section">
+                    <i class="fas fa-brain"></i>
+                    <h3>Predicta</h3>
+                </a>
+                
+                <!-- Acciones del Header -->
+                <div class="header-actions">
+                    <!-- Botón Hamburguesa Global -->
+                    <button class="global-hamburger" id="globalHamburgerBtn">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar Global -->
+    <div class="global-sidebar" id="globalSidebar">
+        <div class="sidebar-header">
+            <h4><i class="fas fa-compass"></i> Navegación</h4>
+            <button class="close-btn" id="closeSidebarBtn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="sidebar-menu">
+            <!-- Dashboard -->
+            <div class="menu-section">
+                <div class="menu-section-title">Principal</div>
+                <a href="{% url 'odds:dashboard' %}" class="menu-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard Principal
+                </a>
+            </div>
+
+            <!-- AI Predictions -->
+            <div class="menu-section">
+                <div class="menu-section-title">Inteligencia Artificial</div>
+                <a href="{% url 'ai_predictions:dashboard' %}" class="menu-item {% if 'ai_predictions' in request.resolver_match.namespace %}active{% endif %}">
+                    <i class="fas fa-brain"></i> Dashboard IA
+                </a>
+                <a href="{% url 'ai_predictions:prediction_form' %}" class="menu-item">
+                    <i class="fas fa-chart-line"></i> Predicción Avanzada
+                </a>
+                <a href="{% url 'ai_predictions:training' %}" class="menu-item">
+                    <i class="fas fa-cogs"></i> Entrenar Modelos
+                </a>
+                <a href="{% url 'ai_predictions:prediction_history' %}" class="menu-item">
+                    <i class="fas fa-history"></i> Historial IA
+                </a>
+                <a href="{% url 'ai_predictions:model_performance' %}" class="menu-item">
+                    <i class="fas fa-chart-bar"></i> Rendimiento Modelos
+                </a>
+            </div>
+
+            <!-- Football Data -->
+            <div class="menu-section">
+                <div class="menu-section-title">Datos de Fútbol</div>
+                <a href="{% url 'football_data:import' %}" class="menu-item">
+                    <i class="fas fa-upload"></i> Importar Datos
+                </a>
+                <a href="{% url 'football_data:matches_list' %}" class="menu-item">
+                    <i class="fas fa-list"></i> Ver Partidos
+                </a>
+                <a href="{% url 'football_data:leagues_list' %}" class="menu-item">
+                    <i class="fas fa-trophy"></i> Ligas
+                </a>
+                <a href="{% url 'football_data:shots' %}" class="menu-item">
+                    <i class="fas fa-chart-pie"></i> Análisis Estadístico
+                </a>
+                <a href="{% url 'football_data:statistics' %}" class="menu-item">
+                    <i class="fas fa-chart-bar"></i> Estadísticas
+                </a>
+                <a href="{% url 'football_data:markets' %}" class="menu-item">
+                    <i class="fas fa-chart-pie"></i> Mercados
+                </a>
+                <a href="{% url 'football_data:league_data_table' %}" class="menu-item">
+                    <i class="fas fa-table"></i> Tabla de Datos
+                </a>
+            </div>
+
+            <!-- Betting System -->
+            <div class="menu-section">
+                <div class="menu-section-title">Sistema de Apuestas</div>
+                <a href="{% url 'odds:matches_list' %}" class="menu-item">
+                    <i class="fas fa-futbol"></i> Partidos
+                </a>
+                <a href="{% url 'odds:live_odds' %}" class="menu-item">
+                    <i class="fas fa-play"></i> En Vivo
+                </a>
+                <a href="{% url 'odds:upcoming_matches' %}" class="menu-item">
+                    <i class="fas fa-calendar-alt"></i> Próximos Partidos
+                </a>
+                <a href="{% url 'odds:sports_list' %}" class="menu-item">
+                    <i class="fas fa-running"></i> Deportes
+                </a>
+                <a href="{% url 'odds:dashboard' %}" class="menu-item">
+                    <i class="fas fa-chart-area"></i> Cuotas
+                </a>
+            </div>
+
+            <!-- Tools -->
+            <div class="menu-section">
+                <div class="menu-section-title">Herramientas</div>
+                <a href="{% url 'odds:dashboard' %}" class="menu-item">
+                    <i class="fas fa-robot"></i> Bot de Apuestas
+                </a>
+                <a href="{% url 'odds:dashboard' %}" class="menu-item">
+                    <i class="fas fa-balance-scale"></i> Arbitraje
+                </a>
+                <a href="{% url 'odds:dashboard' %}" class="menu-item">
+                    <i class="fas fa-bell"></i> Alertas
+                </a>
+            </div>
+
+            <!-- Admin -->
+            <div class="menu-section">
+                <div class="menu-section-title">Administración</div>
+                <a href="/admin/" class="menu-item">
+                    <i class="fas fa-cog"></i> Panel Admin
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay Global -->
+    <div class="global-overlay" id="globalOverlay"></div>
+
+    <!-- Contenido Principal -->
+    <main class="main-content">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Funcionalidad del menú hamburguesa global
+        document.addEventListener('DOMContentLoaded', function() {
+            const hamburgerBtn = document.getElementById('globalHamburgerBtn');
+            const sidebar = document.getElementById('globalSidebar');
+            const overlay = document.getElementById('globalOverlay');
+            const closeBtn = document.getElementById('closeSidebarBtn');
+
+            function openSidebar() {
+                sidebar.classList.add('active');
+                overlay.classList.add('active');
+            }
+
+            function closeSidebar() {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+            }
+
+            hamburgerBtn.addEventListener('click', openSidebar);
+            closeBtn.addEventListener('click', closeSidebar);
+            overlay.addEventListener('click', closeSidebar);
+
+            // Cerrar sidebar al hacer clic en un enlace en móviles
+            if (window.innerWidth <= 768) {
+                const menuItems = document.querySelectorAll('.menu-item');
+                menuItems.forEach(item => {
+                    item.addEventListener('click', closeSidebar);
+                });
+            }
+
+            // Cerrar sidebar con tecla Escape
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeSidebar();
+                }
+            });
+
+            // Animación suave del botón hamburguesa
+            hamburgerBtn.addEventListener('click', function() {
+                this.style.transform = 'rotate(90deg)';
+                setTimeout(() => {
+                    this.style.transform = 'rotate(0deg)';
+                }, 300);
+            });
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

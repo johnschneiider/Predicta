@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout
-from django.contrib.auth.decorators import login_required
+# from django.contrib.auth.decorators import login_required  # Temporalmente deshabilitado
 from django.contrib import messages
 from django.views import View
 from django.utils.decorators import method_decorator
@@ -54,7 +54,7 @@ class VistaRegistro(View):
         
         return render(request, 'cuentas/registro.html', {'form': form})
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class VistaDashboard(View):
     """
     Vista del dashboard principal

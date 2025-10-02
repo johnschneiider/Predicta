@@ -9,7 +9,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Avg, Count, Max, Min
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
+# from django.contrib.auth.decorators import login_required  # Temporalmente deshabilitado
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.contrib import messages
@@ -22,7 +22,7 @@ from django.core.paginator import Paginator
 import json
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class FootballDataDashboardView(View):
     """Dashboard principal de datos de fútbol"""
     
@@ -54,7 +54,7 @@ class FootballDataDashboardView(View):
         return render(request, 'football_data/dashboard.html', context)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class LeaguesListView(View):
     """Lista de ligas"""
     
@@ -72,7 +72,7 @@ class LeaguesListView(View):
         return render(request, 'football_data/leagues_list.html', context)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class LeagueDetailView(View):
     """Detalle de una liga específica"""
     
@@ -120,7 +120,7 @@ class LeagueDetailView(View):
         return render(request, 'football_data/league_detail.html', context)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class MatchesListView(View):
     """Lista de partidos"""
     
@@ -173,7 +173,7 @@ class MatchesListView(View):
         return render(request, 'football_data/matches_list.html', context)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class MatchDetailView(View):
     """Detalle de un partido específico"""
     
@@ -204,7 +204,7 @@ class MatchDetailView(View):
         return render(request, 'football_data/match_detail.html', context)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class ImportView(View):
     """Vista para importar archivos Excel"""
     
@@ -321,7 +321,7 @@ class ImportView(View):
         return render(request, 'football_data/import.html', context)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class DeleteFileView(View):
     """Vista para eliminar archivos importados"""
     
@@ -368,7 +368,7 @@ class DeleteFileView(View):
         return redirect('football_data:import')
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class DeleteAllFilesView(View):
     """Vista para eliminar todos los archivos y datos"""
     
@@ -404,7 +404,7 @@ class DeleteAllFilesView(View):
 
 
 @method_decorator(csrf_exempt, name='dispatch')
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class ImportAjaxView(View):
     """Vista AJAX para importar archivos"""
     
@@ -429,7 +429,7 @@ class ImportAjaxView(View):
         return JsonResponse(result)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class StatisticsView(View):
     """Vista de estadísticas"""
     
@@ -546,7 +546,7 @@ class StatisticsView(View):
         return render(request, 'football_data/statistics.html', context)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class LeagueDataTableView(View):
     """Vista para mostrar tabla de datos de una liga específica"""
     
@@ -585,7 +585,7 @@ class LeagueDataTableView(View):
         return render(request, 'football_data/league_data_table.html', context)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class MarketsView(View):
     """Vista de análisis de mercados con gráficas"""
     

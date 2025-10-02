@@ -4,7 +4,7 @@ Vistas para predicciones de IA
 
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
+# from django.contrib.auth.decorators import login_required  # Temporalmente deshabilitado
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.contrib import messages
@@ -144,7 +144,7 @@ def process_predictions_background(session_key, home_team, away_team, league_id,
             pass
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class PredictionDashboardView(View):
     """Dashboard principal de predicciones"""
     
@@ -158,7 +158,7 @@ class PredictionDashboardView(View):
         return render(request, 'ai_predictions/dashboard.html', context)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class PredictionFormView(View):
     """Vista para el formulario de predicción"""
     
@@ -225,7 +225,7 @@ class PredictionFormView(View):
             }, status=400)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class PredictionResultView(View):
     """Vista para mostrar resultados de predicción"""
     
@@ -268,7 +268,7 @@ class PredictionResultView(View):
         return render(request, 'ai_predictions/prediction_result_new.html', context)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class TrainingView(View):
     """Vista para entrenar modelos"""
     
@@ -310,7 +310,7 @@ class TrainingView(View):
         return redirect('ai_predictions:training')
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class GetTeamsView(View):
     """API para obtener equipos de una liga"""
     
@@ -335,7 +335,7 @@ class GetTeamsView(View):
             return JsonResponse({'error': str(e)}, status=500)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class PredictionProgressView(View):
     """API para obtener el progreso de la predicción"""
     
@@ -355,7 +355,7 @@ class PredictionProgressView(View):
             return JsonResponse({'error': str(e)}, status=500)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class PredictionHistoryView(View):
     """Vista para historial de predicciones"""
     
@@ -379,7 +379,7 @@ class PredictionHistoryView(View):
         return render(request, 'ai_predictions/prediction_history.html', context)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class ModelPerformanceView(View):
     """Vista para rendimiento de modelos"""
     
@@ -393,7 +393,7 @@ class ModelPerformanceView(View):
         return render(request, 'ai_predictions/model_performance.html', context)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class QuickPredictionView(View):
     """Vista para predicción rápida con AJAX"""
     
@@ -424,7 +424,7 @@ class QuickPredictionView(View):
             return JsonResponse({'error': str(e)}, status=500)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class TestPredictionsView(View):
     """Vista de prueba para verificar predicciones avanzadas"""
     

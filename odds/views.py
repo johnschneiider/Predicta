@@ -6,7 +6,7 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
+# from django.contrib.auth.decorators import login_required  # Temporalmente deshabilitado
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.core.paginator import Paginator
@@ -21,7 +21,7 @@ from .services import OddsAPIService
 logger = logging.getLogger('odds')
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class OddsDashboardView(View):
     """Vista principal del dashboard de cuotas"""
     
@@ -52,7 +52,7 @@ class OddsDashboardView(View):
         return render(request, 'odds/dashboard.html', context)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class MatchesListView(View):
     """Lista de partidos con cuotas"""
     
@@ -94,7 +94,7 @@ class MatchesListView(View):
         return render(request, 'odds/matches_list.html', context)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class MatchDetailView(View):
     """Detalle de un partido con todas sus cuotas"""
     
@@ -218,7 +218,7 @@ class SyncOddsView(View):
             return redirect('odds:sync_odds')
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class UpcomingMatchesView(View):
     """Vista para mostrar próximos partidos programados"""
     
@@ -359,7 +359,7 @@ class UpcomingMatchesView(View):
     
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class LiveOddsView(View):
     """Vista para mostrar cuotas en tiempo real"""
     
@@ -395,7 +395,7 @@ class LiveOddsView(View):
         return render(request, 'odds/live_odds.html', context)
 
 
-@method_decorator(login_required, name='dispatch')
+# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
 class SportsListView(View):
     """Lista de deportes disponibles"""
     

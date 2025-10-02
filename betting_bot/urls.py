@@ -19,7 +19,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import redirect
-from django.contrib.auth.decorators import login_required
+# from django.contrib.auth.decorators import login_required  # Temporalmente deshabilitado
 
 def redirect_to_dashboard(request):
     """Redirige al dashboard apropiado según el estado de autenticación"""

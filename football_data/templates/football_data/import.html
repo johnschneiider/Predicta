@@ -45,6 +45,33 @@
     .alert li:last-child {
         margin-bottom: 0;
     }
+    
+    .input-group .btn {
+        border-left: 0;
+    }
+    
+    .input-group .form-select + .btn {
+        border-left: 1px solid #ced4da;
+        border-radius: 0 0.375rem 0.375rem 0;
+    }
+    
+    .input-group .form-control + .btn {
+        border-left: 1px solid #ced4da;
+        border-radius: 0 0.375rem 0.375rem 0;
+    }
+    
+    #customLeagueDiv {
+        border: 2px dashed #0dcaf0;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        transition: all 0.3s ease;
+    }
+    
+    #customLeagueDiv.show {
+        border-color: #198754;
+        background-color: #d1e7dd;
+    }
 </style>
 {% endblock %}
 
@@ -144,7 +171,12 @@
                         <label for="{{ form.league.id_for_label }}" class="form-label">
                             <i class="fas fa-trophy"></i> {{ form.league.label }}
                         </label>
-                        {{ form.league }}
+                        <div class="input-group">
+                            {{ form.league }}
+                            <button type="button" class="btn btn-outline-success" id="addLeagueBtn" title="Crear nueva liga">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
                         {% if form.league.errors %}
                             <div class="alert alert-warning mt-2">
                                 <i class="fas fa-exclamation-triangle"></i>
@@ -156,14 +188,30 @@
                                 </ul>
                             </div>
                         {% endif %}
-                        <div class="form-text">{{ form.league.help_text }}</div>
+                        <div class="form-text">
+                            {{ form.league.help_text }}
+                            <br>
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i> 
+                                Si no encuentras tu liga, haz clic en el botón <i class="fas fa-plus"></i> para crear una nueva.
+                            </small>
+                        </div>
                     </div>
                     
                     <div class="mb-3" id="customLeagueDiv" style="display: none;">
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-plus-circle"></i> Crear Nueva Liga</h6>
+                            <p class="mb-2">Escribe el nombre de la nueva liga que quieres crear:</p>
+                        </div>
                         <label for="{{ form.league_name.id_for_label }}" class="form-label">
-                            <i class="fas fa-edit"></i> {{ form.league_name.label }}
+                            <i class="fas fa-edit"></i> Nombre de la Nueva Liga
                         </label>
-                        {{ form.league_name }}
+                        <div class="input-group">
+                            {{ form.league_name }}
+                            <button type="button" class="btn btn-outline-secondary" id="cancelLeagueBtn" title="Cancelar creación">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                         {% if form.league_name.errors %}
                             <div class="alert alert-warning mt-2">
                                 <i class="fas fa-exclamation-triangle"></i>
@@ -175,7 +223,10 @@
                                 </ul>
                             </div>
                         {% endif %}
-                        <div class="form-text">{{ form.league_name.help_text }}</div>
+                        <div class="form-text">
+                            <i class="fas fa-lightbulb"></i> 
+                            Ejemplos: Liga MX, MLS, Brasileirão, J-League, A-League...
+                        </div>
                     </div>
                     
                     <div class="mb-3">
@@ -419,16 +470,55 @@
         }
     });
     
-    // Mostrar/ocultar campo de liga personalizada
+    // Función para mostrar campo de liga personalizada
+    function showCustomLeagueField() {
+        const customLeagueDiv = document.getElementById('customLeagueDiv');
+        const leagueNameField = document.getElementById('leagueName');
+        const leagueSelect = document.getElementById('leagueSelect');
+        
+        customLeagueDiv.style.display = 'block';
+        customLeagueDiv.classList.add('show');
+        leagueNameField.required = true;
+        leagueSelect.value = 'Other';
+        leagueNameField.focus();
+    }
+    
+    // Función para ocultar campo de liga personalizada
+    function hideCustomLeagueField() {
+        const customLeagueDiv = document.getElementById('customLeagueDiv');
+        const leagueNameField = document.getElementById('leagueName');
+        const leagueSelect = document.getElementById('leagueSelect');
+        
+        customLeagueDiv.style.display = 'none';
+        customLeagueDiv.classList.remove('show');
+        leagueNameField.required = false;
+        leagueNameField.value = '';
+        leagueSelect.value = '';
+    }
+    
+    // Event listener para el botón de agregar liga
+    document.getElementById('addLeagueBtn').addEventListener('click', function() {
+        showCustomLeagueField();
+    });
+    
+    // Event listener para el botón de cancelar
+    document.getElementById('cancelLeagueBtn').addEventListener('click', function() {
+        hideCustomLeagueField();
+    });
+    
+    // Mostrar/ocultar campo de liga personalizada cuando se selecciona "Other"
     document.getElementById('leagueSelect').addEventListener('change', function(e) {
         const customLeagueDiv = document.getElementById('customLeagueDiv');
         const leagueNameField = document.getElementById('leagueName');
         
         if (e.target.value === 'Other') {
             customLeagueDiv.style.display = 'block';
+            customLeagueDiv.classList.add('show');
             leagueNameField.required = true;
+            leagueNameField.focus();
         } else {
             customLeagueDiv.style.display = 'none';
+            customLeagueDiv.classList.remove('show');
             leagueNameField.required = false;
             leagueNameField.value = '';
         }

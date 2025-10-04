@@ -42,6 +42,9 @@ class SimplePredictionService:
                 elif 'both_teams_score' in prediction_type:
                     data = [m.fthg for m in matches if m.fthg is not None]
                     default_value = 1.5  # Promedio realista de goles
+                elif 'shots_on_target' in prediction_type:
+                    data = [m.hst for m in matches if m.hst is not None]
+                    default_value = 5.0  # Promedio realista de remates a puerta local
                 else:
                     data = [m.hs for m in matches if m.hs is not None]
                     default_value = 12.0  # Promedio realista de remates
@@ -62,6 +65,9 @@ class SimplePredictionService:
                 elif 'both_teams_score' in prediction_type:
                     data = [m.ftag for m in matches if m.ftag is not None]
                     default_value = 1.2  # Promedio realista de goles visitante
+                elif 'shots_on_target' in prediction_type:
+                    data = [m.ast for m in matches if m.ast is not None]
+                    default_value = 4.0  # Promedio realista de remates a puerta visitante
                 else:
                     data = [m.as_field for m in matches if m.as_field is not None]
                     default_value = 11.0  # Promedio realista de remates visitante
@@ -79,6 +85,8 @@ class SimplePredictionService:
             if 'goals' in prediction_type or 'both_teams_score' in prediction_type:
                 default_value = 1.5
             elif 'corners' in prediction_type:
+                default_value = 5.0
+            elif 'shots_on_target' in prediction_type:
                 default_value = 5.0
             else:
                 default_value = 12.0
@@ -117,6 +125,14 @@ class SimplePredictionService:
                 lambda_combined = home_stats['avg_value'] * 1.1 * (1 + np.random.normal(0, 0.05))
             elif prediction_type == 'corners_away':
                 lambda_combined = away_stats['avg_value'] * 0.9 * (1 + np.random.normal(0, 0.05))
+            elif prediction_type == 'shots_on_target_total':
+                lambda_home = home_stats['avg_value'] * 1.1  # Ventaja de local
+                lambda_away = away_stats['avg_value'] * 0.9  # Desventaja de visitante
+                lambda_combined = lambda_home + lambda_away
+            elif prediction_type == 'shots_on_target_home':
+                lambda_combined = home_stats['avg_value'] * 1.1 * (1 + np.random.normal(0, 0.05))
+            elif prediction_type == 'shots_on_target_away':
+                lambda_combined = away_stats['avg_value'] * 0.9 * (1 + np.random.normal(0, 0.05))
             elif prediction_type == 'both_teams_score':
                 # Para ambos marcan, calculamos probabilidad de que ambos equipos marquen
                 home_goals = home_stats['avg_value'] * 1.1
@@ -134,6 +150,8 @@ class SimplePredictionService:
                 thresholds = [1, 2, 3, 4, 5]
             elif 'corners' in prediction_type:
                 thresholds = [8, 10, 12, 15, 20]
+            elif 'shots_on_target' in prediction_type:
+                thresholds = [4, 6, 8, 10, 12]
             elif 'both_teams_score' in prediction_type:
                 # Para ambos marcan, calculamos probabilidad de que ambos equipos marquen
                 home_goals = home_stats['avg_value'] * 1.1
@@ -261,6 +279,33 @@ class SimplePredictionService:
                         date__gte=cutoff_date
                     ).order_by('-date')[:10]
                     recent_data = [m.as_field for m in matches if m.as_field is not None]
+                elif prediction_type == 'shots_on_target_home':
+                    matches = Match.objects.filter(
+                        league=league,
+                        home_team=home_team,
+                        date__gte=cutoff_date
+                    ).order_by('-date')[:10]
+                    recent_data = [m.hst for m in matches if m.hst is not None]
+                elif prediction_type == 'shots_on_target_away':
+                    matches = Match.objects.filter(
+                        league=league,
+                        away_team=away_team,
+                        date__gte=cutoff_date
+                    ).order_by('-date')[:10]
+                    recent_data = [m.ast for m in matches if m.ast is not None]
+                elif prediction_type == 'shots_on_target_total':
+                    home_matches = Match.objects.filter(
+                        league=league,
+                        home_team=home_team,
+                        date__gte=cutoff_date
+                    ).order_by('-date')[:5]
+                    away_matches = Match.objects.filter(
+                        league=league,
+                        away_team=away_team,
+                        date__gte=cutoff_date
+                    ).order_by('-date')[:5]
+                    recent_data = ([m.hst for m in home_matches if m.hst is not None] + 
+                                 [m.ast for m in away_matches if m.ast is not None])
                 else:  # shots_total
                     home_matches = Match.objects.filter(
                         league=league,

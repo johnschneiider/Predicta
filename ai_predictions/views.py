@@ -37,6 +37,7 @@ def process_predictions_background(session_key, home_team, away_team, league_id,
         
         prediction_types = [
             'shots_total', 'shots_home', 'shots_away',
+            'shots_on_target_total',
             'goals_total', 'goals_home', 'goals_away',
             'corners_total', 'corners_home', 'corners_away',
             'both_teams_score'
@@ -187,7 +188,7 @@ class PredictionFormView(View):
                 # Inicializar progreso en sesión
                 request.session['prediction_progress'] = {
                     'current': 0,
-                    'total': 10,
+                    'total': 11,
                     'current_type': 'Iniciando...',
                     'status': 'processing'
                 }
@@ -343,7 +344,7 @@ class PredictionProgressView(View):
         try:
             progress = request.session.get('prediction_progress', {
                 'current': 0,
-                'total': 10,
+                'total': 11,
                 'current_type': 'Iniciando...',
                 'status': 'idle'
             })

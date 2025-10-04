@@ -67,8 +67,7 @@ class ExcelUploadForm(forms.Form):
         widget=forms.TextInput(attrs={
             'class': 'form-control',
             'placeholder': 'Ej: Liga MX, MLS, Brasileirão...',
-            'id': 'leagueName',
-            'style': 'display: none;'
+            'id': 'leagueName'
         })
     )
     

@@ -229,16 +229,6 @@
         </div>
     </div>
 
-    <!-- Debug Info -->
-    <div class="row mb-3">
-        <div class="col-12">
-            <div class="alert alert-info">
-                <h6><i class="fas fa-chart-line"></i> Modelo Oficial:</h6>
-                <p><strong>Ensemble Average:</strong> Modelo que combina múltiples algoritmos estadísticos para proporcionar la predicción más precisa y confiable.</p>
-                <p><strong>Tipos de predicción disponibles:</strong> {{ prediction.all_predictions.keys|join:", " }}</p>
-            </div>
-        </div>
-    </div>
 
     <!-- Tabla de Predicciones -->
     <div class="row">
@@ -246,7 +236,7 @@
             <div class="predictions-table">
                 <div class="table-title">
                     <h4>
-                        <i class="fas fa-chart-line"></i> Predicciones del Modelo Oficial
+                        <i class="fas fa-chart-line"></i> Predicciones de Modelos
                     </h4>
                 </div>
                 
@@ -282,7 +272,7 @@
                             <tr>
                                 <td class="model-name">
                                     {{ model_name }}
-                                    <br><small class="text-muted">Modelo Oficial</small>
+                                    <br><small class="text-muted">Modelo Ensemble</small>
                                 </td>
                                 <!-- Remates -->
                                 <td>
@@ -445,7 +435,7 @@
                     <h5><i class="fas fa-info-circle"></i> Interpretación de Resultados</h5>
                 </div>
                 <div class="card-body">
-                    <p><strong>Modelo Oficial - Ensemble Average:</strong></p>
+                    <p><strong>Ensemble Average:</strong></p>
                     <ul>
                         <li><strong>Algoritmo Avanzado:</strong> Combina múltiples modelos estadísticos para mayor precisión</li>
                         <li><strong>Promedio Inteligente:</strong> Integra distribuciones de Poisson y promedios históricos</li>

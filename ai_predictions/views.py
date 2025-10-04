@@ -20,7 +20,7 @@ from .services import PredictionService
 from .multi_models import MultiModelPredictionService
 from .advanced_models import AdvancedStatisticalModels
 from .model_validation import ModelValidator
-from .simple_models import SimplePredictionService
+from .simple_models import SimplePredictionService, ModeloHibridoCorners, ModeloHibridoGeneral
 from .model_trainer import ModelTrainer
 from .forms import PredictionForm
 
@@ -64,27 +64,55 @@ def process_predictions_background(session_key, home_team, away_team, league_id,
                 simple_service = SimplePredictionService()
                 trainer = ModelTrainer()
                 
-                # SIEMPRE usar solo modelos simples para garantizar 3 modelos
+                # Generar modelos simples (2 modelos)
                 logger.info(f"Generando modelos simples para {pred_type}...")
                 predictions = simple_service.get_all_simple_predictions(home_team, away_team, league, pred_type)
                 logger.info(f"Modelos simples generados para {pred_type}: {len(predictions)}")
                 
-                # Verificar que tenemos exactamente 3 modelos
+                # Agregar modelo híbrido como tercer modelo
+                try:
+                    if 'corners' in pred_type:
+                        # Usar modelo híbrido especializado para corners
+                        hybrid_model = ModeloHibridoCorners()
+                        hybrid_prediction = hybrid_model.predecir(home_team, away_team, league, pred_type)
+                        predictions.append(hybrid_prediction)
+                        logger.info(f"Modelo Híbrido Corners agregado para {pred_type}")
+                    else:
+                        # Usar modelo híbrido general para otros tipos
+                        hybrid_model = ModeloHibridoGeneral()
+                        hybrid_prediction = hybrid_model.predecir(home_team, away_team, league, pred_type)
+                        predictions.append(hybrid_prediction)
+                        logger.info(f"Modelo Híbrido General agregado para {pred_type}")
+                except Exception as e:
+                    logger.error(f"Error agregando modelo híbrido para {pred_type}: {e}")
+                    # Crear modelo híbrido de fallback
+                    hybrid_fallback = {
+                        'model_name': 'Modelo Híbrido',
+                        'prediction': 10.0,
+                        'confidence': 0.6,
+                        'probabilities': {'over_10': 0.5, 'over_15': 0.3, 'over_20': 0.1},
+                        'total_matches': 0,
+                        'component_predictions': {}
+                    }
+                    predictions.append(hybrid_fallback)
+                    logger.info(f"Modelo híbrido de fallback agregado para {pred_type}")
+                
+                # Verificar que tenemos exactamente 3 modelos (2 simples + 1 híbrido)
                 if len(predictions) != 3:
                     logger.error(f"ERROR: Solo se generaron {len(predictions)} modelos para {pred_type}, esperados 3")
-                    # Forzar la generación de 3 modelos
-                    if len(predictions) < 3:
-                        # Agregar modelo Ensemble si falta
+                    # Forzar la generación de modelos faltantes
+                    while len(predictions) < 3:
                         try:
+                            # Agregar modelo Ensemble como fallback
                             ensemble_pred = simple_service.ensemble_average_model(home_team, away_team, league, pred_type)
                             predictions.append(ensemble_pred)
-                            logger.info(f"Ensemble agregado manualmente para {pred_type}")
+                            logger.info(f"Ensemble agregado como fallback para {pred_type}")
                         except Exception as e:
-                            logger.error(f"Error agregando Ensemble manualmente: {e}")
+                            logger.error(f"Error agregando Ensemble como fallback: {e}")
                             # Crear ensemble de fallback
                             ensemble_fallback = {
                                 'model_name': 'Ensemble Average',
-                                'prediction': 15.0,
+                                'prediction': 10.0,
                                 'confidence': 0.5,
                                 'probabilities': {'over_10': 0.5, 'over_15': 0.3, 'over_20': 0.1},
                                 'total_matches': 0

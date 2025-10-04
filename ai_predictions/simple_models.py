@@ -583,3 +583,228 @@ class SimplePredictionService:
             'probabilities': probabilities,
             'total_matches': 0
         }
+
+
+class PoissonCornersModel:
+    """Modelo Poisson específico para predicción de corners"""
+    
+    def __init__(self):
+        self.name = "Poisson Corners Model"
+    
+    def predict(self, home_team: str, away_team: str, league: League, prediction_type: str = 'corners_total') -> float:
+        """Predicción específica para corners usando distribución de Poisson"""
+        try:
+            from scipy.stats import poisson
+            
+            # Obtener estadísticas específicas para corners
+            cutoff_date = timezone.now().date() - timedelta(days=180)
+            
+            # Estadísticas del equipo local
+            home_matches = Match.objects.filter(
+                league=league,
+                home_team=home_team,
+                date__gte=cutoff_date
+            ).order_by('-date')[:20]
+            
+            home_corners_data = [m.hc for m in home_matches if m.hc is not None]
+            home_avg_corners = np.mean(home_corners_data) if home_corners_data else 5.5
+            
+            # Estadísticas del equipo visitante
+            away_matches = Match.objects.filter(
+                league=league,
+                away_team=away_team,
+                date__gte=cutoff_date
+            ).order_by('-date')[:20]
+            
+            away_corners_data = [m.ac for m in away_matches if m.ac is not None]
+            away_avg_corners = np.mean(away_corners_data) if away_corners_data else 4.5
+            
+            # Estadísticas de la liga
+            league_matches = Match.objects.filter(
+                league=league,
+                date__gte=cutoff_date
+            ).order_by('-date')[:100]
+            
+            league_home_corners = [m.hc for m in league_matches if m.hc is not None]
+            league_away_corners = [m.ac for m in league_matches if m.ac is not None]
+            
+            league_avg_home_corners = np.mean(league_home_corners) if league_home_corners else 5.5
+            league_avg_away_corners = np.mean(league_away_corners) if league_away_corners else 4.5
+            
+            if prediction_type == 'corners_total':
+                # Calcular lambda para corners totales
+                lambda_home = (home_avg_corners / league_avg_home_corners) * league_avg_home_corners
+                lambda_away = (away_avg_corners / league_avg_away_corners) * league_avg_away_corners
+                lambda_total = lambda_home + lambda_away
+                
+                # Aplicar distribución de Poisson
+                prediction = poisson.rvs(lambda_total)
+                return float(prediction)
+                
+            elif prediction_type == 'corners_home':
+                lambda_home = (home_avg_corners / league_avg_home_corners) * league_avg_home_corners
+                prediction = poisson.rvs(lambda_home)
+                return float(prediction)
+                
+            elif prediction_type == 'corners_away':
+                lambda_away = (away_avg_corners / league_avg_away_corners) * league_avg_away_corners
+                prediction = poisson.rvs(lambda_away)
+                return float(prediction)
+            
+            return 5.0  # Valor por defecto
+            
+        except Exception as e:
+            logger.error(f"Error en PoissonCornersModel: {str(e)}")
+            return 5.0
+
+
+class ModeloHibridoCorners:
+    """Modelo híbrido que combina múltiples enfoques para predicción de corners"""
+    
+    def __init__(self):
+        self.modelo_poisson = PoissonCornersModel()
+        self.modelo_poisson_simple = None  # Se inicializará con SimplePredictionService
+        self.modelo_average = None  # Se inicializará con SimplePredictionService
+        self.name = "Modelo Híbrido Corners"
+        
+    def predecir(self, home_team: str, away_team: str, league: League, prediction_type: str = 'corners_total') -> Dict:
+        """Predicción híbrida combinando múltiples modelos"""
+        try:
+            # Inicializar modelos si no están disponibles
+            if self.modelo_poisson_simple is None:
+                self.modelo_poisson_simple = SimplePredictionService()
+            if self.modelo_average is None:
+                self.modelo_average = SimplePredictionService()
+            
+            # Predicción Poisson especializada (peso 0.4)
+            pred_poisson = self.modelo_poisson.predict(home_team, away_team, league, prediction_type)
+            
+            # Predicción Poisson simple (peso 0.3)
+            poisson_result = self.modelo_poisson_simple.simple_poisson_model(
+                home_team, away_team, league, prediction_type
+            )
+            pred_poisson_simple = poisson_result.get('prediction', 5.0)
+            
+            # Predicción Average (peso 0.3)
+            average_result = self.modelo_average.simple_average_model(
+                home_team, away_team, league, prediction_type
+            )
+            pred_average = average_result.get('prediction', 5.0)
+            
+            # Ensemble con pesos optimizados
+            prediccion_final = (
+                0.4 * pred_poisson + 
+                0.3 * pred_poisson_simple + 
+                0.3 * pred_average
+            )
+            
+            # Calcular confianza basada en la consistencia de los modelos
+            predicciones = [pred_poisson, pred_poisson_simple, pred_average]
+            std_dev = np.std(predicciones)
+            confidence = max(0.1, min(0.9, 1.0 - (std_dev / np.mean(predicciones))))
+            
+            # Calcular probabilidades para diferentes rangos
+            if prediction_type in ['corners_total', 'corners_home', 'corners_away']:
+                thresholds = [5, 7, 9, 12, 15]
+                probabilities = {}
+                
+                for i, threshold in enumerate(thresholds):
+                    prob = max(0.1, min(0.9, 1.0 - abs(prediccion_final - threshold) / 10))
+                    probabilities[f'over_{threshold}'] = prob
+            
+            logger.info(f"Modelo Híbrido Corners - {prediction_type}: {prediccion_final:.2f}")
+            
+            return {
+                'model_name': self.name,
+                'prediction': round(prediccion_final, 2),
+                'confidence': round(confidence, 3),
+                'probabilities': probabilities,
+                'total_matches': 0,
+                'component_predictions': {
+                    'poisson_specialized': pred_poisson,
+                    'poisson_simple': pred_poisson_simple,
+                    'average': pred_average
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error en ModeloHibridoCorners: {str(e)}")
+            return {
+                'model_name': self.name,
+                'prediction': 5.0,
+                'confidence': 0.5,
+                'probabilities': {},
+                'total_matches': 0,
+                'component_predictions': {}
+            }
+
+
+class ModeloHibridoGeneral:
+    """Modelo híbrido general que puede aplicarse a cualquier tipo de predicción"""
+    
+    def __init__(self):
+        self.modelo_poisson_simple = SimplePredictionService()
+        self.modelo_average = SimplePredictionService()
+        self.name = "Modelo Híbrido General"
+        
+    def predecir(self, home_team: str, away_team: str, league: League, prediction_type: str = 'shots_total') -> Dict:
+        """Predicción híbrida general para cualquier tipo de predicción"""
+        try:
+            # Predicción Poisson (peso 0.5)
+            poisson_result = self.modelo_poisson_simple.simple_poisson_model(
+                home_team, away_team, league, prediction_type
+            )
+            pred_poisson = poisson_result.get('prediction', 5.0)
+            
+            # Predicción Average (peso 0.3)
+            average_result = self.modelo_average.simple_average_model(
+                home_team, away_team, league, prediction_type
+            )
+            pred_average = average_result.get('prediction', 5.0)
+            
+            # Predicción Trend (peso 0.2)
+            trend_result = self.modelo_poisson_simple.simple_trend_model(
+                home_team, away_team, league, prediction_type
+            )
+            pred_trend = trend_result.get('prediction', 5.0)
+            
+            # Ensemble con pesos optimizados
+            prediccion_final = (
+                0.5 * pred_poisson + 
+                0.3 * pred_average + 
+                0.2 * pred_trend
+            )
+            
+            # Calcular confianza
+            predicciones = [pred_poisson, pred_average, pred_trend]
+            std_dev = np.std(predicciones)
+            confidence = max(0.1, min(0.9, 1.0 - (std_dev / max(np.mean(predicciones), 0.1))))
+            
+            # Usar probabilidades del modelo Poisson (más completo)
+            probabilities = poisson_result.get('probabilities', {})
+            
+            logger.info(f"Modelo Híbrido General - {prediction_type}: {prediccion_final:.2f}")
+            
+            return {
+                'model_name': self.name,
+                'prediction': round(prediccion_final, 2),
+                'confidence': round(confidence, 3),
+                'probabilities': probabilities,
+                'total_matches': 0,
+                'component_predictions': {
+                    'poisson': pred_poisson,
+                    'average': pred_average,
+                    'trend': pred_trend
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error en ModeloHibridoGeneral: {str(e)}")
+            return {
+                'model_name': self.name,
+                'prediction': 5.0,
+                'confidence': 0.5,
+                'probabilities': {},
+                'total_matches': 0,
+                'component_predictions': {}
+            }

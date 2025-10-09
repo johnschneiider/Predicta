@@ -120,18 +120,11 @@ class ExcelUploadForm(forms.Form):
     def clean_league(self):
         """Validar selección de liga"""
         league = self.cleaned_data.get('league')
-        league_name = self.cleaned_data.get('league_name', '').strip()
         
         if not league or league == '':
             raise forms.ValidationError(
                 '⚠️ Debe seleccionar una liga de la lista',
                 code='no_league_selected'
-            )
-        
-        if league == 'Other' and not league_name:
-            raise forms.ValidationError(
-                '⚠️ Debe especificar el nombre de la liga personalizada cuando selecciona "Otra liga..."',
-                code='custom_league_required'
             )
         
         return league
@@ -144,7 +137,7 @@ class ExcelUploadForm(forms.Form):
         if league == 'Other':
             if not league_name:
                 raise forms.ValidationError(
-                    '⚠️ Debe escribir el nombre de la liga personalizada',
+                    '⚠️ Debe especificar el nombre de la liga personalizada cuando selecciona "Otra liga..."',
                     code='custom_league_name_required'
                 )
             
@@ -164,12 +157,27 @@ class ExcelUploadForm(forms.Form):
             
             return league_name
         else:
-            return league  # Usar la liga seleccionada de la lista
+            # Si no es "Other", usar la liga seleccionada de la lista
+            return league
     
     def clean_season(self):
         """Limpiar temporada"""
         season = self.cleaned_data.get('season', '').strip()
         return season if season else None
+    
+    def clean(self):
+        """Validación general del formulario"""
+        cleaned_data = super().clean()
+        league = cleaned_data.get('league')
+        league_name = cleaned_data.get('league_name', '').strip()
+        
+        # Validación adicional para liga personalizada
+        if league == 'Other' and not league_name:
+            raise forms.ValidationError({
+                'league_name': '⚠️ Debe especificar el nombre de la liga personalizada cuando selecciona "Otra liga..."'
+            })
+        
+        return cleaned_data
 
 
 class LeagueFilterForm(forms.Form):

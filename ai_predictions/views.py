@@ -64,12 +64,12 @@ def process_predictions_background(session_key, home_team, away_team, league_id,
                 simple_service = SimplePredictionService()
                 trainer = ModelTrainer()
                 
-                # Generar modelos simples (2 modelos)
+                # Generar modelos simples (3 modelos: Dixon-Coles/Poisson, Average, Ensemble)
                 logger.info(f"Generando modelos simples para {pred_type}...")
                 predictions = simple_service.get_all_simple_predictions(home_team, away_team, league, pred_type)
                 logger.info(f"Modelos simples generados para {pred_type}: {len(predictions)}")
                 
-                # Agregar modelo híbrido como tercer modelo
+                # Agregar modelo híbrido como cuarto modelo adicional
                 try:
                     if 'corners' in pred_type:
                         # Usar modelo híbrido especializado para corners
@@ -97,9 +97,9 @@ def process_predictions_background(session_key, home_team, away_team, league_id,
                     predictions.append(hybrid_fallback)
                     logger.info(f"Modelo híbrido de fallback agregado para {pred_type}")
                 
-                # Verificar que tenemos exactamente 3 modelos (2 simples + 1 híbrido)
-                if len(predictions) != 3:
-                    logger.error(f"ERROR: Solo se generaron {len(predictions)} modelos para {pred_type}, esperados 3")
+                # Verificar que tenemos al menos 3 modelos (Dixon-Coles + Average + Ensemble + [Híbrido opcional])
+                if len(predictions) < 3:
+                    logger.warning(f"ADVERTENCIA: Solo se generaron {len(predictions)} modelos para {pred_type}, esperados al menos 3")
                     # Forzar la generación de modelos faltantes
                     while len(predictions) < 3:
                         try:
@@ -119,18 +119,11 @@ def process_predictions_background(session_key, home_team, away_team, league_id,
                             }
                             predictions.append(ensemble_fallback)
                             logger.info(f"Ensemble de fallback agregado para {pred_type}")
-                else:
-                    logger.info(f"[OK] {pred_type}: 3 modelos generados correctamente")
+                            break
                 
                 all_predictions_by_type[pred_type] = predictions
                 model_names = [pred['model_name'] for pred in predictions]
-                logger.info(f"{pred_type}: {len(predictions)} modelos generados - {model_names}")
-                
-                # Verificación final
-                if len(predictions) == 3:
-                    logger.info(f"[OK] {pred_type}: 3 modelos generados correctamente")
-                else:
-                    logger.error(f"✗ {pred_type}: Solo {len(predictions)} modelos, esperados 3")
+                logger.info(f"[OK] {pred_type}: {len(predictions)} modelos generados - {model_names}")
                 
             except Exception as e:
                 logger.error(f"Error en {pred_type}: {e}")

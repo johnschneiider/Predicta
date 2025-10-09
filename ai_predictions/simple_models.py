@@ -8,16 +8,80 @@ from typing import Dict, List
 from datetime import timedelta
 from django.utils import timezone
 from django.db import models
+from django.core.cache import cache
 from football_data.models import Match, League
+from .dixon_coles import DixonColesModel
 
 logger = logging.getLogger('ai_predictions')
+
+# Caché global para parámetro rho optimizado
+_GLOBAL_RHO_CACHE = {'rho': -0.13, 'last_update': None}
 
 
 class SimplePredictionService:
     """Servicio de predicciones simples y rápidas"""
     
     def __init__(self):
-        pass
+        self.dixon_coles_model = DixonColesModel()
+        # Optimizar rho periódicamente con datos recientes
+        self._optimize_rho_if_needed()
+    
+    def _optimize_rho_if_needed(self):
+        """
+        Optimiza el parámetro rho del modelo Dixon-Coles usando datos históricos.
+        Usa caché para evitar recalcular en cada solicitud.
+        """
+        global _GLOBAL_RHO_CACHE
+        
+        try:
+            # Verificar si necesitamos re-optimizar
+            now = timezone.now()
+            last_update = _GLOBAL_RHO_CACHE.get('last_update')
+            
+            # Re-optimizar solo si:
+            # 1. Nunca se ha optimizado (last_update es None)
+            # 2. Han pasado más de 24 horas desde la última optimización
+            should_optimize = (
+                last_update is None or 
+                (now - last_update).total_seconds() > 86400  # 24 horas
+            )
+            
+            if not should_optimize:
+                # Usar valor cacheado
+                cached_rho = _GLOBAL_RHO_CACHE.get('rho', -0.13)
+                self.dixon_coles_model.rho = cached_rho
+                logger.debug(f"Usando rho cacheado: {cached_rho:.4f}")
+                return
+            
+            # Obtener partidos recientes de múltiples ligas para optimización
+            cutoff_date = timezone.now().date() - timedelta(days=180)
+            recent_matches = Match.objects.filter(
+                date__gte=cutoff_date
+            ).exclude(
+                models.Q(fthg__isnull=True) | models.Q(ftag__isnull=True)
+            ).order_by('-date')[:500]  # Usar últimos 500 partidos
+            
+            if len(recent_matches) >= 100:
+                logger.info(f"🔄 Optimizando parámetro rho con {len(recent_matches)} partidos (caché expirada)")
+                optimal_rho = self.dixon_coles_model.optimize_rho(list(recent_matches), is_goals=True)
+                
+                # Guardar en caché global
+                _GLOBAL_RHO_CACHE['rho'] = optimal_rho
+                _GLOBAL_RHO_CACHE['last_update'] = now
+                
+                self.dixon_coles_model.rho = optimal_rho
+                logger.info(f"✅ Rho optimizado y cacheado: {optimal_rho:.4f} (válido por 24h)")
+            else:
+                logger.warning("⚠️  Pocos datos para optimización de rho, usando valor por defecto")
+                # Guardar valor por defecto en caché
+                _GLOBAL_RHO_CACHE['rho'] = -0.13
+                _GLOBAL_RHO_CACHE['last_update'] = now
+                self.dixon_coles_model.rho = -0.13
+                
+        except Exception as e:
+            logger.error(f"❌ Error optimizando rho: {e}")
+            # En caso de error, usar valor por defecto
+            self.dixon_coles_model.rho = _GLOBAL_RHO_CACHE.get('rho', -0.13)
     
     def get_team_simple_stats(self, team_name: str, league: League, is_home: bool = True, prediction_type: str = 'shots_total') -> Dict:
         """Obtiene estadísticas simples de un equipo"""
@@ -94,8 +158,35 @@ class SimplePredictionService:
     
     def simple_poisson_model(self, home_team: str, away_team: str, league: League, 
                            prediction_type: str = 'shots_total') -> Dict:
-        """Modelo de Poisson simple y rápido"""
+        """
+        Modelo de Poisson mejorado con Dixon-Coles.
+        
+        El modelo Dixon-Coles corrige las limitaciones del Poisson tradicional
+        para marcadores bajos (0-0, 1-0, 0-1, 1-1) que son comunes en fútbol.
+        """
         try:
+            # Usar Dixon-Coles para predicciones de goles
+            if 'goals' in prediction_type or 'both_teams_score' in prediction_type:
+                # Dixon-Coles es ideal para predicción de goles
+                dixon_coles_pred = self.dixon_coles_model.predict_match(
+                    home_team, away_team, league, prediction_type
+                )
+                
+                # Adaptar formato de respuesta
+                return {
+                    'model_name': 'Dixon-Coles Poisson',
+                    'prediction': dixon_coles_pred['prediction'],
+                    'confidence': dixon_coles_pred['confidence'],
+                    'probabilities': dixon_coles_pred['probabilities'],
+                    'total_matches': dixon_coles_pred['total_matches'],
+                    'lambda_home': dixon_coles_pred.get('lambda_home', 1.5),
+                    'lambda_away': dixon_coles_pred.get('lambda_away', 1.2),
+                    'rho': dixon_coles_pred.get('rho', -0.13),
+                    'match_outcome': dixon_coles_pred.get('match_outcome', {}),
+                    'model_type': 'dixon_coles'
+                }
+            
+            # Para otros tipos de predicción (corners, remates), usar Poisson tradicional mejorado
             home_stats = self.get_team_simple_stats(home_team, league, True, prediction_type)
             away_stats = self.get_team_simple_stats(away_team, league, False, prediction_type)
             
@@ -109,14 +200,6 @@ class SimplePredictionService:
                 lambda_combined = home_stats['avg_value'] * 1.15 * (1 + np.random.normal(0, 0.05))  # Ruido aleatorio
             elif prediction_type == 'shots_away':
                 lambda_combined = away_stats['avg_value'] * 0.85 * (1 + np.random.normal(0, 0.05))
-            elif prediction_type == 'goals_total':
-                lambda_home = home_stats['avg_value'] * 1.1  # Ventaja de local
-                lambda_away = away_stats['avg_value'] * 0.9  # Desventaja de visitante
-                lambda_combined = lambda_home + lambda_away
-            elif prediction_type == 'goals_home':
-                lambda_combined = home_stats['avg_value'] * 1.1 * (1 + np.random.normal(0, 0.03))
-            elif prediction_type == 'goals_away':
-                lambda_combined = away_stats['avg_value'] * 0.9 * (1 + np.random.normal(0, 0.03))
             elif prediction_type == 'corners_total':
                 lambda_home = home_stats['avg_value'] * 1.1  # Ventaja de local
                 lambda_away = away_stats['avg_value'] * 0.9  # Desventaja de visitante
@@ -133,11 +216,6 @@ class SimplePredictionService:
                 lambda_combined = home_stats['avg_value'] * 1.1 * (1 + np.random.normal(0, 0.05))
             elif prediction_type == 'shots_on_target_away':
                 lambda_combined = away_stats['avg_value'] * 0.9 * (1 + np.random.normal(0, 0.05))
-            elif prediction_type == 'both_teams_score':
-                # Para ambos marcan, calculamos probabilidad de que ambos equipos marquen
-                home_goals = home_stats['avg_value'] * 1.1
-                away_goals = away_stats['avg_value'] * 0.9
-                lambda_combined = (home_goals + away_goals) / 2
             else:
                 lambda_combined = (home_stats['avg_value'] + away_stats['avg_value']) / 2
             
@@ -146,32 +224,23 @@ class SimplePredictionService:
             
             # Calcular probabilidades con umbrales correctos
             probabilities = {}
-            if 'goals' in prediction_type:
-                thresholds = [1, 2, 3, 4, 5]
-            elif 'corners' in prediction_type:
+            if 'corners' in prediction_type:
                 thresholds = [8, 10, 12, 15, 20]
             elif 'shots_on_target' in prediction_type:
                 thresholds = [4, 6, 8, 10, 12]
-            elif 'both_teams_score' in prediction_type:
-                # Para ambos marcan, calculamos probabilidad de que ambos equipos marquen
-                home_goals = home_stats['avg_value'] * 1.1
-                away_goals = away_stats['avg_value'] * 0.9
-                both_score_prob = min(0.8, max(0.2, (home_goals * away_goals) / 4))
-                probabilities = {'over_1': both_score_prob, 'over_2': both_score_prob * 0.8, 'over_3': both_score_prob * 0.6}
             else:
                 thresholds = [10, 15, 20, 25, 30]
             
-            if 'both_teams_score' not in prediction_type:
-                for threshold in thresholds:
-                    prob = max(0, min(1, 1 - (threshold / lambda_combined) if lambda_combined > 0 else 0.5))
-                    probabilities[f'over_{threshold}'] = prob
+            for threshold in thresholds:
+                prob = max(0, min(1, 1 - (threshold / lambda_combined) if lambda_combined > 0 else 0.5))
+                probabilities[f'over_{threshold}'] = prob
             
             # Confianza basada en cantidad de datos
             total_matches = home_stats['matches_count'] + away_stats['matches_count']
             confidence = min(0.9, max(0.3, total_matches / 20))
             
             return {
-                'model_name': 'Simple Poisson',
+                'model_name': 'Enhanced Poisson',
                 'prediction': prediction,
                 'confidence': confidence,
                 'probabilities': probabilities,
@@ -179,9 +248,9 @@ class SimplePredictionService:
             }
             
         except Exception as e:
-            logger.error(f"Error en modelo Poisson simple: {e}")
+            logger.error(f"Error en modelo Poisson mejorado: {e}")
             default_prediction = 3.0 if 'goals' in prediction_type else 15.0
-            return self._fallback_prediction('Simple Poisson', default_prediction, 0.5, prediction_type)
+            return self._fallback_prediction('Dixon-Coles Poisson', default_prediction, 0.5, prediction_type)
     
     def simple_average_model(self, home_team: str, away_team: str, league: League, 
                            prediction_type: str = 'shots_total') -> Dict:
@@ -450,37 +519,37 @@ class SimplePredictionService:
     
     def ensemble_average_model(self, home_team: str, away_team: str, league: League, 
                              prediction_type: str = 'shots_total') -> Dict:
-        """Modelo ensemble que promedia los otros 2 modelos"""
+        """Modelo ensemble que promedia los otros 2 modelos (Dixon-Coles + Average)"""
         try:
             logger.info(f"Iniciando generación de modelo Ensemble para {prediction_type}")
             
             # Obtener predicciones de los otros modelos
-            poisson_pred = self.simple_poisson_model(home_team, away_team, league, prediction_type)
-            logger.info(f"Poisson obtenido: {poisson_pred['model_name']} - {poisson_pred['prediction']}")
+            dixon_coles_pred = self.simple_poisson_model(home_team, away_team, league, prediction_type)
+            logger.info(f"Dixon-Coles obtenido: {dixon_coles_pred['model_name']} - {dixon_coles_pred['prediction']}")
             
             average_pred = self.simple_average_model(home_team, away_team, league, prediction_type)
             logger.info(f"Average obtenido: {average_pred['model_name']} - {average_pred['prediction']}")
             
             # Calcular promedio de predicciones (solo 2 modelos)
             ensemble_prediction = (
-                poisson_pred['prediction'] + 
+                dixon_coles_pred['prediction'] + 
                 average_pred['prediction']
             ) / 2
             
             # Calcular promedio de confianza (solo 2 modelos)
             ensemble_confidence = (
-                poisson_pred['confidence'] + 
+                dixon_coles_pred['confidence'] + 
                 average_pred['confidence']
             ) / 2
             
             # Promedio de probabilidades (solo 2 modelos)
             ensemble_probabilities = {}
-            all_keys = set(poisson_pred['probabilities'].keys()) | set(average_pred['probabilities'].keys())
+            all_keys = set(dixon_coles_pred['probabilities'].keys()) | set(average_pred['probabilities'].keys())
             
             for key in all_keys:
                 values = []
-                if key in poisson_pred['probabilities']:
-                    values.append(poisson_pred['probabilities'][key])
+                if key in dixon_coles_pred['probabilities']:
+                    values.append(dixon_coles_pred['probabilities'][key])
                 if key in average_pred['probabilities']:
                     values.append(average_pred['probabilities'][key])
                 
@@ -489,7 +558,7 @@ class SimplePredictionService:
             
             # Total de partidos (suma de los 2 modelos)
             total_matches = (
-                poisson_pred['total_matches'] + 
+                dixon_coles_pred['total_matches'] + 
                 average_pred['total_matches']
             )
             
@@ -511,14 +580,14 @@ class SimplePredictionService:
 
     def get_all_simple_predictions(self, home_team: str, away_team: str, league: League, 
                                  prediction_type: str = 'shots_total') -> List[Dict]:
-        """Obtiene predicciones de todos los modelos simples"""
+        """Obtiene predicciones de todos los modelos simples incluyendo Dixon-Coles"""
         predictions = []
         
         try:
-            # Modelo Poisson simple
-            poisson_pred = self.simple_poisson_model(home_team, away_team, league, prediction_type)
-            predictions.append(poisson_pred)
-            logger.info(f"Simple Poisson generado: {poisson_pred['model_name']}")
+            # Modelo Dixon-Coles / Poisson mejorado
+            dixon_coles_pred = self.simple_poisson_model(home_team, away_team, league, prediction_type)
+            predictions.append(dixon_coles_pred)
+            logger.info(f"Dixon-Coles generado: {dixon_coles_pred['model_name']}")
             
             # Modelo promedio simple
             average_pred = self.simple_average_model(home_team, away_team, league, prediction_type)
@@ -535,15 +604,15 @@ class SimplePredictionService:
                 logger.error(f"ERROR generando Ensemble para {prediction_type}: {e}")
                 # Crear un ensemble de fallback basado en los otros 2 modelos
                 try:
-                    avg_prediction = (poisson_pred['prediction'] + average_pred['prediction']) / 2
-                    avg_confidence = (poisson_pred['confidence'] + average_pred['confidence']) / 2
+                    avg_prediction = (dixon_coles_pred['prediction'] + average_pred['prediction']) / 2
+                    avg_confidence = (dixon_coles_pred['confidence'] + average_pred['confidence']) / 2
                     
                     ensemble_fallback = {
                         'model_name': 'Ensemble Average',
                         'prediction': avg_prediction,
                         'confidence': avg_confidence,
-                        'probabilities': poisson_pred['probabilities'],  # Usar probabilidades del primer modelo
-                        'total_matches': poisson_pred['total_matches'] + average_pred['total_matches']
+                        'probabilities': dixon_coles_pred['probabilities'],  # Usar probabilidades del primer modelo
+                        'total_matches': dixon_coles_pred['total_matches'] + average_pred['total_matches']
                     }
                     predictions.append(ensemble_fallback)
                     logger.info(f"Ensemble de fallback creado: {ensemble_fallback['model_name']}")

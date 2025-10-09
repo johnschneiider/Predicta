@@ -58,7 +58,7 @@ media/
 
 # Database
 *.db
-# *.sqlite3  # Comentado para incluir en el repositorio
+*.sqlite3
 
 # Logs
 logs/

@@ -1,0 +1,457 @@
+"""
+Implementación del modelo Dixon-Coles para predicciones de fútbol
+Mejora el modelo Poisson tradicional aplicando correcciones para marcadores bajos
+"""
+
+import numpy as np
+from scipy.stats import poisson
+from scipy.optimize import minimize
+import logging
+from typing import Dict, List, Tuple
+from datetime import timedelta
+from django.utils import timezone
+from django.db import models as django_models
+from football_data.models import Match, League
+
+logger = logging.getLogger('ai_predictions')
+
+
+class DixonColesModel:
+    """
+    Modelo Dixon-Coles para predicción de resultados de fútbol.
+    
+    El modelo Dixon-Coles es una extensión del modelo Poisson doble que introduce
+    un parámetro de corrección (rho/tau) para ajustar las probabilidades de marcadores
+    bajos, especialmente 0-0, 1-0, 0-1 y 1-1, que el modelo Poisson tradicional
+    tiende a subestimar o sobrestimar.
+    """
+    
+    def __init__(self, rho: float = -0.13):
+        """
+        Inicializa el modelo Dixon-Coles.
+        
+        Args:
+            rho: Parámetro de corrección para marcadores bajos.
+                 Valores típicos están entre -0.2 y 0.
+                 Por defecto: -0.13 (valor comúnmente encontrado en fútbol)
+        """
+        self.rho = rho
+        self.name = "Dixon-Coles"
+        self.fitted_params = {}
+    
+    def tau_correction(self, home_goals: int, away_goals: int, lambda_home: float, 
+                      lambda_away: float) -> float:
+        """
+        Factor de corrección τ (tau) de Dixon-Coles para marcadores bajos.
+        
+        Args:
+            home_goals: Goles del equipo local
+            away_goals: Goles del equipo visitante
+            lambda_home: Tasa esperada de goles del local (Poisson)
+            lambda_away: Tasa esperada de goles del visitante (Poisson)
+        
+        Returns:
+            Factor de corrección multiplicativo
+        """
+        # Aplicar corrección solo para marcadores bajos
+        if home_goals == 0 and away_goals == 0:
+            return 1 - lambda_home * lambda_away * self.rho
+        elif home_goals == 0 and away_goals == 1:
+            return 1 + lambda_home * self.rho
+        elif home_goals == 1 and away_goals == 0:
+            return 1 + lambda_away * self.rho
+        elif home_goals == 1 and away_goals == 1:
+            return 1 - self.rho
+        else:
+            # Sin corrección para otros marcadores
+            return 1.0
+    
+    def probability(self, home_goals: int, away_goals: int, lambda_home: float, 
+                   lambda_away: float) -> float:
+        """
+        Calcula la probabilidad de un marcador específico usando Dixon-Coles.
+        
+        Args:
+            home_goals: Goles del equipo local
+            away_goals: Goles del equipo visitante
+            lambda_home: Tasa esperada de goles del local
+            lambda_away: Tasa esperada de goles del visitante
+        
+        Returns:
+            Probabilidad del marcador
+        """
+        # Probabilidad base usando Poisson doble independiente
+        poisson_prob = poisson.pmf(home_goals, lambda_home) * poisson.pmf(away_goals, lambda_away)
+        
+        # Aplicar corrección de Dixon-Coles
+        tau = self.tau_correction(home_goals, away_goals, lambda_home, lambda_away)
+        
+        return poisson_prob * tau
+    
+    def calculate_lambda_parameters(self, home_team: str, away_team: str, league: League,
+                                   is_goals: bool = True) -> Tuple[float, float]:
+        """
+        Calcula los parámetros lambda (tasas de Poisson) para ambos equipos.
+        
+        Args:
+            home_team: Nombre del equipo local
+            away_team: Nombre del equipo visitante
+            league: Liga del partido
+            is_goals: True para goles, False para otros eventos
+        
+        Returns:
+            Tupla (lambda_home, lambda_away)
+        """
+        try:
+            cutoff_date = timezone.now().date() - timedelta(days=365)  # 1 año
+            
+            # Estadísticas del equipo local en casa
+            home_matches = Match.objects.filter(
+                league=league,
+                home_team=home_team,
+                date__gte=cutoff_date
+            ).order_by('-date')[:30]
+            
+            if is_goals:
+                home_data = [m.fthg for m in home_matches if m.fthg is not None]
+                home_data_against = [m.ftag for m in home_matches if m.ftag is not None]
+            else:
+                home_data = [m.hs for m in home_matches if m.hs is not None]
+                home_data_against = [m.as_field for m in home_matches if m.as_field is not None]
+            
+            # Estadísticas del equipo visitante fuera de casa
+            away_matches = Match.objects.filter(
+                league=league,
+                away_team=away_team,
+                date__gte=cutoff_date
+            ).order_by('-date')[:30]
+            
+            if is_goals:
+                away_data = [m.ftag for m in away_matches if m.ftag is not None]
+                away_data_against = [m.fthg for m in away_matches if m.fthg is not None]
+            else:
+                away_data = [m.as_field for m in away_matches if m.as_field is not None]
+                away_data_against = [m.hs for m in away_matches if m.hs is not None]
+            
+            # Estadísticas de la liga (para ajuste contextual)
+            league_matches = Match.objects.filter(
+                league=league,
+                date__gte=cutoff_date
+            ).order_by('-date')[:200]
+            
+            if is_goals:
+                league_home_avg = np.mean([m.fthg for m in league_matches if m.fthg is not None]) or 1.5
+                league_away_avg = np.mean([m.ftag for m in league_matches if m.ftag is not None]) or 1.2
+            else:
+                league_home_avg = np.mean([m.hs for m in league_matches if m.hs is not None]) or 12.0
+                league_away_avg = np.mean([m.as_field for m in league_matches if m.as_field is not None]) or 11.0
+            
+            # Calcular tasas de ataque y defensa
+            if home_data and away_data_against:
+                home_attack = np.mean(home_data)
+                away_defense = np.mean(away_data_against)
+            else:
+                home_attack = league_home_avg
+                away_defense = league_away_avg
+            
+            if away_data and home_data_against:
+                away_attack = np.mean(away_data)
+                home_defense = np.mean(home_data_against)
+            else:
+                away_attack = league_away_avg
+                home_defense = league_home_avg
+            
+            # Calcular lambda usando el enfoque Dixon-Coles
+            # lambda_home = (ataque_local / media_liga) * (defensa_visitante / media_liga) * media_liga
+            lambda_home = (home_attack / league_home_avg) * (away_defense / league_away_avg) * league_home_avg
+            lambda_away = (away_attack / league_away_avg) * (home_defense / league_home_avg) * league_away_avg
+            
+            # Aplicar ventaja de local/visitante típica en fútbol
+            lambda_home *= 1.15  # ~15% ventaja local
+            lambda_away *= 0.95  # ~5% desventaja visitante
+            
+            # Limitar valores extremos
+            if is_goals:
+                lambda_home = max(0.3, min(4.0, lambda_home))
+                lambda_away = max(0.2, min(3.5, lambda_away))
+            else:
+                lambda_home = max(5.0, min(20.0, lambda_home))
+                lambda_away = max(4.0, min(18.0, lambda_away))
+            
+            return lambda_home, lambda_away
+            
+        except Exception as e:
+            logger.error(f"Error calculando parámetros lambda: {e}")
+            if is_goals:
+                return 1.5, 1.2  # Valores por defecto para goles
+            else:
+                return 12.0, 11.0  # Valores por defecto para remates
+    
+    def optimize_rho(self, matches: List[Match], is_goals: bool = True) -> float:
+        """
+        Optimiza el parámetro rho usando máxima verosimilitud.
+        
+        Args:
+            matches: Lista de partidos históricos
+            is_goals: True para goles, False para otros eventos
+        
+        Returns:
+            Valor óptimo de rho
+        """
+        try:
+            if len(matches) < 20:
+                logger.warning("Pocos datos para optimización, usando rho por defecto")
+                return -0.13
+            
+            def negative_log_likelihood(rho_candidate):
+                """Función objetivo para minimización"""
+                self.rho = rho_candidate
+                total_log_likelihood = 0
+                
+                for match in matches:
+                    try:
+                        # Calcular lambdas para este partido
+                        lambda_home, lambda_away = self.calculate_lambda_parameters(
+                            match.home_team, match.away_team, match.league, is_goals
+                        )
+                        
+                        # Resultado real
+                        if is_goals:
+                            home_score = match.fthg or 0
+                            away_score = match.ftag or 0
+                        else:
+                            home_score = match.hs or 0
+                            away_score = match.as_field or 0
+                        
+                        # Limitar marcadores para evitar desbordamiento
+                        home_score = min(home_score, 10)
+                        away_score = min(away_score, 10)
+                        
+                        # Calcular probabilidad del resultado
+                        prob = self.probability(home_score, away_score, lambda_home, lambda_away)
+                        
+                        # Evitar log(0)
+                        if prob > 0:
+                            total_log_likelihood += np.log(prob)
+                        
+                    except Exception as e:
+                        continue
+                
+                return -total_log_likelihood  # Negativo para minimización
+            
+            # Optimizar rho en un rango razonable
+            result = minimize(
+                negative_log_likelihood,
+                x0=[-0.13],
+                bounds=[(-0.5, 0.2)],
+                method='L-BFGS-B'
+            )
+            
+            optimal_rho = result.x[0]
+            logger.info(f"Rho optimizado: {optimal_rho:.4f}")
+            
+            return optimal_rho
+            
+        except Exception as e:
+            logger.error(f"Error optimizando rho: {e}")
+            return -0.13  # Valor por defecto
+    
+    def predict_match(self, home_team: str, away_team: str, league: League,
+                     prediction_type: str = 'goals_total') -> Dict:
+        """
+        Predice un partido usando el modelo Dixon-Coles.
+        
+        Args:
+            home_team: Nombre del equipo local
+            away_team: Nombre del equipo visitante
+            league: Liga del partido
+            prediction_type: Tipo de predicción
+        
+        Returns:
+            Diccionario con la predicción y probabilidades
+        """
+        try:
+            is_goals = 'goals' in prediction_type
+            
+            # Calcular lambdas
+            lambda_home, lambda_away = self.calculate_lambda_parameters(
+                home_team, away_team, league, is_goals
+            )
+            
+            # Calcular predicción base
+            if prediction_type in ['goals_total', 'shots_total']:
+                prediction = lambda_home + lambda_away
+            elif prediction_type in ['goals_home', 'shots_home']:
+                prediction = lambda_home
+            elif prediction_type in ['goals_away', 'shots_away']:
+                prediction = lambda_away
+            elif prediction_type == 'both_teams_score':
+                # Probabilidad de que ambos equipos marquen
+                prob_home_scores = 1 - self.probability(0, 1, lambda_home, lambda_away)
+                prob_away_scores = 1 - self.probability(1, 0, lambda_home, lambda_away)
+                prediction = (prob_home_scores + prob_away_scores) / 2
+            else:
+                prediction = lambda_home + lambda_away
+            
+            # Calcular probabilidades para diferentes marcadores
+            probabilities = self._calculate_probabilities(
+                lambda_home, lambda_away, prediction_type
+            )
+            
+            # Calcular distribución de resultados (1X2)
+            match_outcome = self._calculate_match_outcome(lambda_home, lambda_away)
+            
+            # Confianza basada en cantidad de datos
+            cutoff_date = timezone.now().date() - timedelta(days=365)
+            home_matches_count = Match.objects.filter(
+                league=league, home_team=home_team, date__gte=cutoff_date
+            ).count()
+            away_matches_count = Match.objects.filter(
+                league=league, away_team=away_team, date__gte=cutoff_date
+            ).count()
+            
+            total_matches = home_matches_count + away_matches_count
+            confidence = min(0.92, max(0.4, total_matches / 40))
+            
+            return {
+                'model_name': 'Dixon-Coles',
+                'prediction': prediction,
+                'confidence': confidence,
+                'probabilities': probabilities,
+                'lambda_home': lambda_home,
+                'lambda_away': lambda_away,
+                'rho': self.rho,
+                'match_outcome': match_outcome,
+                'total_matches': total_matches,
+                'model_type': 'dixon_coles'
+            }
+            
+        except Exception as e:
+            logger.error(f"Error en predicción Dixon-Coles: {e}")
+            return self._fallback_prediction(prediction_type)
+    
+    def _calculate_probabilities(self, lambda_home: float, lambda_away: float,
+                                prediction_type: str) -> Dict:
+        """Calcula probabilidades para diferentes umbrales"""
+        probabilities = {}
+        
+        if 'goals' in prediction_type:
+            thresholds = [1, 2, 3, 4, 5]
+            max_goals = 8
+        elif 'shots' in prediction_type:
+            thresholds = [10, 15, 20, 25, 30]
+            max_goals = 35
+        else:
+            thresholds = [1, 2, 3, 4, 5]
+            max_goals = 8
+        
+        for threshold in thresholds:
+            if 'total' in prediction_type:
+                # Probabilidad de over X goles/remates totales
+                prob_over = 0.0
+                for home_score in range(max_goals + 1):
+                    for away_score in range(max_goals + 1):
+                        if home_score + away_score > threshold:
+                            prob_over += self.probability(
+                                home_score, away_score, lambda_home, lambda_away
+                            )
+                probabilities[f'over_{threshold}'] = min(1.0, max(0.0, prob_over))
+                
+            elif 'home' in prediction_type:
+                # Probabilidad de over X para equipo local
+                prob_over = 0.0
+                for home_score in range(threshold + 1, max_goals + 1):
+                    for away_score in range(max_goals + 1):
+                        prob_over += self.probability(
+                            home_score, away_score, lambda_home, lambda_away
+                        )
+                probabilities[f'over_{threshold}'] = min(1.0, max(0.0, prob_over))
+                
+            elif 'away' in prediction_type:
+                # Probabilidad de over X para equipo visitante
+                prob_over = 0.0
+                for home_score in range(max_goals + 1):
+                    for away_score in range(threshold + 1, max_goals + 1):
+                        prob_over += self.probability(
+                            home_score, away_score, lambda_home, lambda_away
+                        )
+                probabilities[f'over_{threshold}'] = min(1.0, max(0.0, prob_over))
+        
+        return probabilities
+    
+    def _calculate_match_outcome(self, lambda_home: float, lambda_away: float) -> Dict:
+        """
+        Calcula probabilidades de victoria local (1), empate (X) y victoria visitante (2)
+        """
+        prob_home_win = 0.0
+        prob_draw = 0.0
+        prob_away_win = 0.0
+        
+        max_goals = 8
+        
+        for home_score in range(max_goals + 1):
+            for away_score in range(max_goals + 1):
+                prob = self.probability(home_score, away_score, lambda_home, lambda_away)
+                
+                if home_score > away_score:
+                    prob_home_win += prob
+                elif home_score == away_score:
+                    prob_draw += prob
+                else:
+                    prob_away_win += prob
+        
+        return {
+            'home_win': min(1.0, max(0.0, prob_home_win)),
+            'draw': min(1.0, max(0.0, prob_draw)),
+            'away_win': min(1.0, max(0.0, prob_away_win))
+        }
+    
+    def _fallback_prediction(self, prediction_type: str) -> Dict:
+        """Predicción de fallback para errores"""
+        if 'goals' in prediction_type:
+            default_prediction = 2.7 if 'total' in prediction_type else 1.5
+            probabilities = {'over_1': 0.75, 'over_2': 0.55, 'over_3': 0.3, 'over_4': 0.12, 'over_5': 0.04}
+        else:
+            default_prediction = 23.0 if 'total' in prediction_type else 12.0
+            probabilities = {'over_10': 0.7, 'over_15': 0.5, 'over_20': 0.3, 'over_25': 0.12, 'over_30': 0.04}
+        
+        return {
+            'model_name': 'Dixon-Coles (Fallback)',
+            'prediction': default_prediction,
+            'confidence': 0.3,
+            'probabilities': probabilities,
+            'lambda_home': 1.5,
+            'lambda_away': 1.2,
+            'rho': self.rho,
+            'match_outcome': {'home_win': 0.45, 'draw': 0.27, 'away_win': 0.28},
+            'total_matches': 0,
+            'model_type': 'dixon_coles',
+            'error': 'Fallback debido a falta de datos'
+        }
+    
+    def calculate_exact_score_probabilities(self, lambda_home: float, lambda_away: float,
+                                          max_goals: int = 6) -> Dict:
+        """
+        Calcula probabilidades para marcadores exactos usando Dixon-Coles.
+        
+        Args:
+            lambda_home: Tasa de goles del local
+            lambda_away: Tasa de goles del visitante
+            max_goals: Máximo de goles a considerar por equipo
+        
+        Returns:
+            Diccionario con probabilidades de marcadores exactos
+        """
+        score_probs = {}
+        
+        for home_goals in range(max_goals + 1):
+            for away_goals in range(max_goals + 1):
+                prob = self.probability(home_goals, away_goals, lambda_home, lambda_away)
+                score_probs[f"{home_goals}-{away_goals}"] = prob
+        
+        # Ordenar por probabilidad descendente
+        sorted_scores = dict(sorted(score_probs.items(), key=lambda x: x[1], reverse=True))
+        
+        return sorted_scores
+
+

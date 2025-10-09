@@ -476,11 +476,17 @@
         const leagueNameField = document.getElementById('leagueName');
         const leagueSelect = document.getElementById('leagueSelect');
         
+        // Establecer "Otra liga..." en el campo principal
+        leagueSelect.value = 'Other';
+        
+        // Mostrar el campo de nombre personalizado
         customLeagueDiv.style.display = 'block';
         customLeagueDiv.classList.add('show');
         leagueNameField.required = true;
-        leagueSelect.value = 'Other';
         leagueNameField.focus();
+        
+        // Scroll suave al campo
+        customLeagueDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     
     // Función para ocultar campo de liga personalizada
@@ -489,11 +495,17 @@
         const leagueNameField = document.getElementById('leagueName');
         const leagueSelect = document.getElementById('leagueSelect');
         
+        // Limpiar campos
+        leagueNameField.value = '';
+        leagueNameField.required = false;
+        
+        // Ocultar campo personalizado
         customLeagueDiv.style.display = 'none';
         customLeagueDiv.classList.remove('show');
-        leagueNameField.required = false;
-        leagueNameField.value = '';
+        
+        // Resetear selección de liga
         leagueSelect.value = '';
+        leagueSelect.focus();
     }
     
     // Event listener para el botón de agregar liga
@@ -524,6 +536,19 @@
         }
     });
     
+    // Actualizar el campo de liga principal cuando se escribe en el campo personalizado
+    document.getElementById('leagueName').addEventListener('input', function(e) {
+        const leagueSelect = document.getElementById('leagueSelect');
+        const customLeagueDiv = document.getElementById('customLeagueDiv');
+        
+        if (e.target.value.trim()) {
+            // Si hay texto, asegurar que esté seleccionado "Other"
+            leagueSelect.value = 'Other';
+            customLeagueDiv.style.display = 'block';
+            customLeagueDiv.classList.add('show');
+        }
+    });
+    
     // Mostrar progreso durante la carga
     document.getElementById('importForm').addEventListener('submit', function(e) {
         const submitBtn = document.getElementById('submitBtn');
@@ -550,7 +575,8 @@
             const leagueName = document.getElementById('leagueName');
             if (!leagueName.value.trim()) {
                 e.preventDefault();
-                alert('⚠️ Debe especificar el nombre de la liga personalizada');
+                alert('⚠️ Debe especificar el nombre de la liga personalizada cuando selecciona "Otra liga..."');
+                leagueName.focus();
                 return false;
             }
         }

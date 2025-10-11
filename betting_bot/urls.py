@@ -21,17 +21,10 @@ from django.conf.urls.static import static
 from django.shortcuts import redirect
 # from django.contrib.auth.decorators import login_required  # Temporalmente deshabilitado
 
-def redirect_to_dashboard(request):
-    """Redirige al dashboard apropiado según el estado de autenticación"""
-    if request.user.is_authenticated:
-        return redirect('cuentas:dashboard')
-    else:
-        return redirect('cuentas:login')
-
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('cuentas/', include('cuentas.urls')),
-    path('', redirect_to_dashboard, name='home'),
+    path('', redirect('odds:dashboard'), name='home'),
     path('odds/', include('odds.urls')),
     path('football/', include('football_data.urls')),
     path('ai/', include('ai_predictions.urls')),

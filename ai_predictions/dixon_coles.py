@@ -335,6 +335,37 @@ class DixonColesModel:
         """Calcula probabilidades para diferentes umbrales"""
         probabilities = {}
         
+        # Manejo especial para "both_teams_score"
+        if prediction_type == 'both_teams_score':
+            # Probabilidad de que ambos equipos marquen al menos 1 gol
+            max_goals = 8
+            
+            # P(ambos marcan) = 1 - P(local no marca) - P(visitante no marca) + P(ninguno marca)
+            prob_home_no_score = sum(
+                self.probability(0, away_score, lambda_home, lambda_away)
+                for away_score in range(max_goals + 1)
+            )
+            prob_away_no_score = sum(
+                self.probability(home_score, 0, lambda_home, lambda_away)
+                for home_score in range(max_goals + 1)
+            )
+            prob_none_score = self.probability(0, 0, lambda_home, lambda_away)
+            
+            prob_both_score = 1.0 - prob_home_no_score - prob_away_no_score + prob_none_score
+            probabilities['both_score'] = min(1.0, max(0.0, prob_both_score))
+            
+            # También calcular over_1 (al menos 2 goles totales) para compatibilidad
+            prob_over_1 = 0.0
+            for home_score in range(max_goals + 1):
+                for away_score in range(max_goals + 1):
+                    if home_score + away_score > 1:
+                        prob_over_1 += self.probability(
+                            home_score, away_score, lambda_home, lambda_away
+                        )
+            probabilities['over_1'] = min(1.0, max(0.0, prob_over_1))
+            
+            return probabilities
+        
         if 'goals' in prediction_type:
             thresholds = [1, 2, 3, 4, 5]
             max_goals = 8

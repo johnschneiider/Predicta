@@ -190,11 +190,13 @@ LOGGING = {
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'logs' / 'betting_bot.log',
             'formatter': 'verbose',
+            'encoding': 'utf-8',  # Encoding UTF-8 para el archivo de log
         },
         'console': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
+            'stream': 'ext://sys.stdout',  # Usar stdout explícitamente
         },
     },
     'root': {
@@ -213,6 +215,11 @@ LOGGING = {
             'propagate': False,
         },
         'betting': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'ai_predictions': {
             'handlers': ['console', 'file'],
             'level': 'INFO',
             'propagate': False,

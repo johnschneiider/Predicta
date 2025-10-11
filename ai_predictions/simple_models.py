@@ -62,7 +62,7 @@ class SimplePredictionService:
             ).order_by('-date')[:500]  # Usar últimos 500 partidos
             
             if len(recent_matches) >= 100:
-                logger.info(f"🔄 Optimizando parámetro rho con {len(recent_matches)} partidos (caché expirada)")
+                logger.info(f"[OPTIMIZANDO] Parámetro rho con {len(recent_matches)} partidos (caché expirada)")
                 optimal_rho = self.dixon_coles_model.optimize_rho(list(recent_matches), is_goals=True)
                 
                 # Guardar en caché global
@@ -70,16 +70,16 @@ class SimplePredictionService:
                 _GLOBAL_RHO_CACHE['last_update'] = now
                 
                 self.dixon_coles_model.rho = optimal_rho
-                logger.info(f"✅ Rho optimizado y cacheado: {optimal_rho:.4f} (válido por 24h)")
+                logger.info(f"[OK] Rho optimizado y cacheado: {optimal_rho:.4f} (válido por 24h)")
             else:
-                logger.warning("⚠️  Pocos datos para optimización de rho, usando valor por defecto")
+                logger.warning("[ADVERTENCIA] Pocos datos para optimización de rho, usando valor por defecto")
                 # Guardar valor por defecto en caché
                 _GLOBAL_RHO_CACHE['rho'] = -0.13
                 _GLOBAL_RHO_CACHE['last_update'] = now
                 self.dixon_coles_model.rho = -0.13
                 
         except Exception as e:
-            logger.error(f"❌ Error optimizando rho: {e}")
+            logger.error(f"[ERROR] Error optimizando rho: {e}")
             # En caso de error, usar valor por defecto
             self.dixon_coles_model.rho = _GLOBAL_RHO_CACHE.get('rho', -0.13)
     
@@ -293,6 +293,12 @@ class SimplePredictionService:
                 base_prediction = away_stats['avg_value']
                 data_factor = min(1.2, max(0.8, away_stats['matches_count'] / 10))
                 prediction = base_prediction * 0.95 * data_factor
+            elif prediction_type == 'both_teams_score':
+                # Para ambos marcan, calcular probabilidad basada en goles promedio
+                home_goals_avg = home_stats['avg_value']
+                away_goals_avg = away_stats['avg_value']
+                # Probabilidad estimada de que ambos marquen
+                prediction = min(0.9, max(0.1, (home_goals_avg * away_goals_avg) / 2))
             else:
                 prediction = (home_stats['avg_value'] + away_stats['avg_value']) / 2
             
@@ -302,12 +308,17 @@ class SimplePredictionService:
                 thresholds = [1, 2, 3, 4, 5]
             elif 'corners' in prediction_type:
                 thresholds = [8, 10, 12, 15, 20]
+            elif prediction_type == 'both_teams_score':
+                # Para ambos marcan, usar la probabilidad calculada directamente
+                probabilities['both_score'] = prediction
+                probabilities['over_1'] = prediction  # Compatibilidad
             else:
                 thresholds = [10, 15, 20, 25, 30]
             
-            for threshold in thresholds:
-                prob = max(0, min(1, 1 - (threshold / prediction) if prediction > 0 else 0.5))
-                probabilities[f'over_{threshold}'] = prob
+            if prediction_type != 'both_teams_score':
+                for threshold in thresholds:
+                    prob = max(0, min(1, 1 - (threshold / prediction) if prediction > 0 else 0.5))
+                    probabilities[f'over_{threshold}'] = prob
             
             # Confianza basada en datos
             total_matches = home_stats['matches_count'] + away_stats['matches_count']
@@ -486,6 +497,9 @@ class SimplePredictionService:
                 prediction *= 1.05  # Ligera ventaja de local
             elif prediction_type in ['shots_away', 'goals_away']:
                 prediction *= 0.95  # Ligera desventaja de visitante
+            elif prediction_type == 'both_teams_score':
+                # Para ambos marcan, convertir a probabilidad (0-1)
+                prediction = min(0.9, max(0.1, prediction / 2))
             
             # Calcular probabilidades
             probabilities = {}
@@ -493,12 +507,17 @@ class SimplePredictionService:
                 thresholds = [1, 2, 3, 4, 5]
             elif 'corners' in prediction_type:
                 thresholds = [8, 10, 12, 15, 20]
+            elif prediction_type == 'both_teams_score':
+                # Para ambos marcan, usar la probabilidad calculada directamente
+                probabilities['both_score'] = prediction
+                probabilities['over_1'] = prediction  # Compatibilidad
             else:
                 thresholds = [10, 15, 20, 25, 30]
             
-            for threshold in thresholds:
-                prob = max(0, min(1, 1 - (threshold / prediction) if prediction > 0 else 0.5))
-                probabilities[f'over_{threshold}'] = prob
+            if prediction_type != 'both_teams_score':
+                for threshold in thresholds:
+                    prob = max(0, min(1, 1 - (threshold / prediction) if prediction > 0 else 0.5))
+                    probabilities[f'over_{threshold}'] = prob
             
             # Confianza basada en cantidad de datos y consistencia
             data_confidence = min(0.7, max(0.2, len(recent_data) / 15))
@@ -637,7 +656,9 @@ class SimplePredictionService:
     
     def _fallback_prediction(self, model_name: str, prediction: float, confidence: float, prediction_type: str = 'shots_total') -> Dict:
         """Predicción de fallback para errores"""
-        if 'goals' in prediction_type:
+        if prediction_type == 'both_teams_score':
+            probabilities = {'both_score': 0.5, 'over_1': 0.5}
+        elif 'goals' in prediction_type:
             probabilities = {'over_1': 0.8, 'over_2': 0.5, 'over_3': 0.2, 'over_4': 0.05, 'over_5': 0.01}
         else:
             if 'corners' in prediction_type:

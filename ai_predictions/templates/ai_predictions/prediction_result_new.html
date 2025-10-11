@@ -403,9 +403,9 @@
                                     {% if prediction.all_predictions.both_teams_score %}
                                         {% for pred in prediction.all_predictions.both_teams_score %}
                                             {% if pred.model_name == model_name %}
-                                                {% if pred.probabilities.over_1 %}
-                                                    <span class="confidence-badge both-teams-score-prob {% if pred.probabilities.over_1 > 0.6 %}confidence-high{% elif pred.probabilities.over_1 > 0.4 %}confidence-medium{% else %}confidence-low{% endif %}" data-prob="{{ pred.probabilities.over_1|floatformat:3 }}">
-                                                        {{ pred.probabilities.over_1|floatformat:3 }}%
+                                                {% if pred.probabilities.both_score %}
+                                                    <span class="confidence-badge both-teams-score-prob {% if pred.probabilities.both_score > 0.6 %}confidence-high{% elif pred.probabilities.both_score > 0.4 %}confidence-medium{% else %}confidence-low{% endif %}" data-prob="{{ pred.probabilities.both_score }}">
+                                                        -
                                                     </span>
                                                     <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
                                                 {% else %}
@@ -471,7 +471,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const probElements = document.querySelectorAll('.both-teams-score-prob');
     probElements.forEach(element => {
         const prob = parseFloat(element.getAttribute('data-prob'));
-        element.textContent = (prob * 100).toFixed(1) + '%';
+        if (!isNaN(prob)) {
+            element.textContent = (prob * 100).toFixed(1) + '%';
+        }
     });
 });
 </script>

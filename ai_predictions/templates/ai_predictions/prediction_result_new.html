@@ -268,7 +268,6 @@
                         </thead>
                         <tbody>
                             {% for model_name in model_names %}
-                                {% if model_name == 'Ensemble Average' %}
                             <tr>
                                 <td class="model-name">
                                     {{ model_name }}
@@ -280,7 +279,6 @@
                                         {% for pred in prediction.all_predictions.shots_total %}
                                             {% if pred.model_name == model_name %}
                                                 <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
-                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
                                             {% endif %}
                                         {% endfor %}
                                     {% else %}
@@ -292,7 +290,6 @@
                                         {% for pred in prediction.all_predictions.shots_home %}
                                             {% if pred.model_name == model_name %}
                                                 <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
-                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
                                             {% endif %}
                                         {% endfor %}
                                     {% else %}
@@ -304,7 +301,6 @@
                                         {% for pred in prediction.all_predictions.shots_away %}
                                             {% if pred.model_name == model_name %}
                                                 <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
-                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
                                             {% endif %}
                                         {% endfor %}
                                     {% else %}
@@ -317,7 +313,6 @@
                                         {% for pred in prediction.all_predictions.shots_on_target_total %}
                                             {% if pred.model_name == model_name %}
                                                 <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
-                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
                                             {% endif %}
                                         {% endfor %}
                                     {% else %}
@@ -330,7 +325,6 @@
                                         {% for pred in prediction.all_predictions.goals_total %}
                                             {% if pred.model_name == model_name %}
                                                 <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
-                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
                                             {% endif %}
                                         {% endfor %}
                                     {% else %}
@@ -342,7 +336,6 @@
                                         {% for pred in prediction.all_predictions.goals_home %}
                                             {% if pred.model_name == model_name %}
                                                 <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
-                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
                                             {% endif %}
                                         {% endfor %}
                                     {% else %}
@@ -354,7 +347,6 @@
                                         {% for pred in prediction.all_predictions.goals_away %}
                                             {% if pred.model_name == model_name %}
                                                 <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
-                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
                                             {% endif %}
                                         {% endfor %}
                                     {% else %}
@@ -367,7 +359,6 @@
                                         {% for pred in prediction.all_predictions.corners_total %}
                                             {% if pred.model_name == model_name %}
                                                 <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
-                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
                                             {% endif %}
                                         {% endfor %}
                                     {% else %}
@@ -379,7 +370,6 @@
                                         {% for pred in prediction.all_predictions.corners_home %}
                                             {% if pred.model_name == model_name %}
                                                 <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
-                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
                                             {% endif %}
                                         {% endfor %}
                                     {% else %}
@@ -391,7 +381,6 @@
                                         {% for pred in prediction.all_predictions.corners_away %}
                                             {% if pred.model_name == model_name %}
                                                 <span class="prediction-value">{{ pred.prediction|floatformat:1 }}</span>
-                                                <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
                                             {% endif %}
                                         {% endfor %}
                                     {% else %}
@@ -407,7 +396,6 @@
                                                     <span class="confidence-badge both-teams-score-prob {% if pred.probabilities.both_score > 0.6 %}confidence-high{% elif pred.probabilities.both_score > 0.4 %}confidence-medium{% else %}confidence-low{% endif %}" data-prob="{{ pred.probabilities.both_score }}">
                                                         -
                                                     </span>
-                                                    <br><small class="text-muted">Conf: {{ pred.confidence|floatformat:2 }}</small>
                                                 {% else %}
                                                     <span class="text-muted">-</span>
                                                 {% endif %}
@@ -418,7 +406,6 @@
                                     {% endif %}
                                 </td>
                             </tr>
-                                {% endif %}
                             {% endfor %}
                         </tbody>
                     </table>

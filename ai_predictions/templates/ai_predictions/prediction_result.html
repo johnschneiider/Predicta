@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Resultado de Predicción - IA{% endblock %}
 
@@ -179,6 +180,79 @@
     .ensemble-icon { background: linear-gradient(45deg, #f093fb, #f5576c); }
     .linear-icon { background: linear-gradient(45deg, #4ecdc4, #44a08d); }
     .historical-icon { background: linear-gradient(45deg, #a8edea, #fed6e3); color: #333; }
+    
+    /* Estilos para la gráfica histórica */
+    .chart-container {
+        background: #ffffff;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    
+    #leagueHistoricalChart {
+        max-width: 100%;
+        height: auto;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        background: #ffffff;
+    }
+    
+    .chart-info {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .chart-info .badge {
+        font-size: 0.9rem;
+        padding: 8px 15px;
+        border-radius: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .chart-info .badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    
+    .chart-info .badge i {
+        margin-right: 5px;
+    }
+    
+    /* Responsive para la gráfica */
+    @media (max-width: 768px) {
+        #leagueHistoricalChart {
+            width: 100%;
+            height: 300px;
+        }
+        
+        .chart-container {
+            padding: 15px;
+        }
+        
+        .chart-info .row {
+            flex-direction: column;
+        }
+        
+        .chart-info .col-md-4 {
+            margin-bottom: 10px;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        #leagueHistoricalChart {
+            height: 250px;
+        }
+        
+        .chart-info .badge {
+            font-size: 0.8rem;
+            padding: 6px 12px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -291,7 +365,7 @@
                                         {% if model_pred.confidence > 0.7 %}confidence-high
                                         {% elif model_pred.confidence > 0.4 %}confidence-medium
                                         {% else %}confidence-low{% endif %}">
-                                        <span class="confidence-percentage">{{ model_pred.confidence|floatformat:3 }}</span>%
+                                        {{ model_pred.confidence|floatformat:3 }}%
                                     </span>
                                 </td>
                                 {% if 'goals' in prediction.prediction_type %}
@@ -503,6 +577,54 @@
         </div>
     </div>
 
+    <!-- Gráfica Histórica de la Liga -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-line"></i> Estadísticas Históricas de {{ prediction.league }}</h5>
+                    <p class="mb-0 text-muted">Evolución diaria de remates, goles y corners en los últimos meses</p>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <div id="chart-loading" class="text-center" style="padding: 50px;">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <p class="mt-3">Cargando gráfica histórica...</p>
+                        </div>
+                        <canvas id="leagueHistoricalChart" width="800" height="400" style="display: none;"></canvas>
+                    </div>
+                    <div class="chart-info mt-3">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <span class="badge" style="background-color: #e74c3c; color: white; padding: 5px 10px;">
+                                        <i class="fas fa-bullseye"></i> Remates
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <span class="badge" style="background-color: #27ae60; color: white; padding: 5px 10px;">
+                                        <i class="fas fa-futbol"></i> Goles
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <span class="badge" style="background-color: #3498db; color: white; padding: 5px 10px;">
+                                        <i class="fas fa-flag"></i> Corners
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Factores Considerados -->
     <div class="row mt-4">
         <div class="col-12">
@@ -560,16 +682,13 @@
     </div>
 </div>
 
+<!-- Script para la gráfica histórica -->
+<script src="{% static 'js/ai_predictions/league_chart.js' %}"></script>
+
 <script>
 // Animación de las barras de probabilidad
 document.addEventListener('DOMContentLoaded', function() {
-    // Convertir valores de confianza y probabilidades a porcentajes
-    const confidenceElements = document.querySelectorAll('.confidence-percentage');
-    confidenceElements.forEach(element => {
-        const value = parseFloat(element.textContent);
-        element.textContent = (value * 100).toFixed(1);
-    });
-    
+    // Convertir valores de probabilidades a porcentajes
     const probabilityElements = document.querySelectorAll('.probability-percentage');
     probabilityElements.forEach(element => {
         const value = parseFloat(element.textContent);
@@ -594,6 +713,37 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 100);
         });
     }, 500);
+    
+    // PRUEBA SIMPLE: Verificar que todo funcione
+    {% if prediction.league.id %}
+    console.log('=== INICIO DEBUG GRÁFICA ===');
+    console.log('Liga ID:', {{ prediction.league.id }});
+    console.log('initLeagueChart disponible:', typeof initLeagueChart === 'function');
+    console.log('Canvas encontrado:', document.getElementById('leagueHistoricalChart') !== null);
+    
+    // Prueba simple de fetch
+    fetch('/ai/api/league-historical-data/{{ prediction.league.id }}/')
+        .then(response => {
+            console.log('Respuesta fetch:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Datos recibidos:', data.success ? 'ÉXITO' : 'ERROR');
+            console.log('Datos:', data);
+        })
+        .catch(error => {
+            console.error('Error en fetch:', error);
+        });
+    
+    console.log('=== FIN DEBUG GRÁFICA ===');
+    {% else %}
+    console.log('No hay ID de liga disponible para la gráfica');
+    {% endif %}
 });
 </script>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Script para la gráfica histórica -->
+<script src="{% static 'js/ai_predictions/league_chart.js' %}"></script>
 {% endblock %}

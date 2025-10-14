@@ -288,12 +288,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cargar equipos cuando se selecciona una liga
     const leagueSelect = document.querySelector('select[name="league"]');
     if (leagueSelect) {
+        // Cargar equipos si ya hay una liga seleccionada
+        const currentLeagueId = leagueSelect.value;
+        console.log('Liga actual al cargar:', currentLeagueId);
+        if (currentLeagueId && currentLeagueId !== '' && currentLeagueId !== 'undefined') {
+            loadTeams(currentLeagueId);
+        }
+        
         leagueSelect.addEventListener('change', function() {
             const leagueId = this.value;
-            if (leagueId) {
+            console.log('Liga seleccionada:', leagueId);
+            if (leagueId && leagueId !== '' && leagueId !== 'undefined') {
                 loadTeams(leagueId);
+            } else {
+                console.warn('Valor de liga inválido seleccionado:', leagueId);
             }
         });
+    } else {
+        console.warn('No se encontró el select de liga');
     }
     
     // Variable para prevenir envíos duplicados
@@ -368,8 +380,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const interval = setInterval(function() {
             checkCount++;
             
-            // Timeout de seguridad
-            if (checkCount > maxChecks) {
+            // Timeout de seguridad reducido a 30 segundos
+            if (checkCount > 30) { // 30 × 1000ms = 30 segundos
                 console.log('Timeout alcanzado, verificando resultados...');
                 clearInterval(interval);
                 // Intentar ir a resultados de todos modos
@@ -432,13 +444,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 .catch(error => {
                     console.error('Error obteniendo progreso:', error);
                 });
-        }, 500); // Consultar cada 500ms
+        }, 2000); // Consultar cada 2 segundos para reducir carga
     }
 });
 
 function loadTeams(leagueId) {
+    // Validar que leagueId no sea undefined o vacío
+    if (!leagueId || leagueId === 'undefined') {
+        console.warn('loadTeams llamado con leagueId inválido:', leagueId);
+        return;
+    }
+    
+    console.log('Cargando equipos para liga ID:', leagueId);
     fetch(`/ai/api/teams/${leagueId}/`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.teams) {
                 updateTeamSelect('home_team', data.teams);

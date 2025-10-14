@@ -210,11 +210,49 @@ class ImportView(View):
     
     def get(self, request):
         form = ExcelUploadForm()
-        imported_files = ExcelFile.objects.select_related('league').order_by('-imported_at')[:10]
+        
+        # Obtener información de equipos y fechas por liga
+        leagues_data = []
+        leagues = League.objects.all().order_by('name')
+        
+        for league in leagues:
+            # Obtener todos los equipos únicos (como local y visitante)
+            home_teams = Match.objects.filter(league=league).values_list('home_team', flat=True).distinct()
+            away_teams = Match.objects.filter(league=league).values_list('away_team', flat=True).distinct()
+            all_teams = sorted(set(list(home_teams)) | set(list(away_teams)))
+            
+            teams_info = []
+            for team_name in all_teams:
+                # Obtener fechas de partidos de este equipo
+                team_matches = Match.objects.filter(
+                    Q(home_team=team_name) | Q(away_team=team_name),
+                    league=league
+                ).aggregate(
+                    first_date=Min('date'),
+                    last_date=Max('date'),
+                    total_matches=Count('id')
+                )
+                
+                if team_matches['first_date']:
+                    teams_info.append({
+                        'name': team_name,
+                        'first_date': team_matches['first_date'],
+                        'last_date': team_matches['last_date'],
+                        'total_matches': team_matches['total_matches']
+                    })
+            
+            # Ordenar equipos por fecha más reciente (último partido) de forma descendente
+            teams_info.sort(key=lambda x: x['last_date'], reverse=True)
+            
+            if teams_info:
+                leagues_data.append({
+                    'league': league,
+                    'teams': teams_info
+                })
         
         context = {
             'form': form,
-            'imported_files': imported_files,
+            'leagues_data': leagues_data,
         }
         
         return render(request, 'football_data/import.html', context)
@@ -311,11 +349,48 @@ class ImportView(View):
                         messages.error(request, f"❌ {field}: {error}")
         
         # Pasar el formulario con errores para mostrarlos en el template
-        imported_files = ExcelFile.objects.select_related('league').order_by('-imported_at')[:10]
+        # Obtener información de equipos y fechas por liga
+        leagues_data = []
+        leagues = League.objects.all().order_by('name')
+        
+        for league in leagues:
+            # Obtener todos los equipos únicos (como local y visitante)
+            home_teams = Match.objects.filter(league=league).values_list('home_team', flat=True).distinct()
+            away_teams = Match.objects.filter(league=league).values_list('away_team', flat=True).distinct()
+            all_teams = sorted(set(list(home_teams)) | set(list(away_teams)))
+            
+            teams_info = []
+            for team_name in all_teams:
+                # Obtener fechas de partidos de este equipo
+                team_matches = Match.objects.filter(
+                    Q(home_team=team_name) | Q(away_team=team_name),
+                    league=league
+                ).aggregate(
+                    first_date=Min('date'),
+                    last_date=Max('date'),
+                    total_matches=Count('id')
+                )
+                
+                if team_matches['first_date']:
+                    teams_info.append({
+                        'name': team_name,
+                        'first_date': team_matches['first_date'],
+                        'last_date': team_matches['last_date'],
+                        'total_matches': team_matches['total_matches']
+                    })
+            
+            # Ordenar equipos por fecha más reciente (último partido) de forma descendente
+            teams_info.sort(key=lambda x: x['last_date'], reverse=True)
+            
+            if teams_info:
+                leagues_data.append({
+                    'league': league,
+                    'teams': teams_info
+                })
         
         context = {
             'form': form,
-            'imported_files': imported_files,
+            'leagues_data': leagues_data,
         }
         
         return render(request, 'football_data/import.html', context)

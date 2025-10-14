@@ -12,6 +12,8 @@ from football_data.models import League
 from .specialized_models import SpecializedPredictionModels
 from .simple_models import SimplePredictionService
 from .advanced_features import AdvancedFeatureExtractor
+from .zip_model import ZeroInflatedPoissonModel
+from .random_forest_model import RandomForestModel
 
 logger = logging.getLogger('ai_predictions')
 
@@ -23,6 +25,8 @@ class AdvancedEnsemblePredictor:
         self.specialized_models = SpecializedPredictionModels()
         self.simple_models = SimplePredictionService()
         self.feature_extractor = AdvancedFeatureExtractor()
+        self.zip_model = ZeroInflatedPoissonModel()
+        self.random_forest_model = RandomForestModel()
         self.ensemble_weights = {}
         self.performance_history = {}
     
@@ -32,11 +36,11 @@ class AdvancedEnsemblePredictor:
         predictions = []
         
         try:
-            # 1. Modelo especializado (más peso)
+            # 1. Modelo especializado (peso alto para su tipo específico)
             specialized_pred = self.specialized_models.predict_with_specialized_model(
                 home_team, away_team, league, prediction_type
             )
-            specialized_pred['model_weight'] = 0.4  # 40% del peso
+            specialized_pred['model_weight'] = 0.25  # 25% del peso
             specialized_pred['model_category'] = 'specialized'
             predictions.append(specialized_pred)
             
@@ -45,15 +49,33 @@ class AdvancedEnsemblePredictor:
                 home_team, away_team, league, prediction_type
             )
             for pred in simple_predictions:
-                pred['model_weight'] = 0.2  # 20% del peso cada uno
+                pred['model_weight'] = 0.15  # 15% del peso cada uno
                 pred['model_category'] = 'simple'
                 predictions.append(pred)
             
-            # 3. Modelo de características avanzadas (peso medio)
+            # 3. Modelo ZIP para goles (peso alto para goles)
+            if 'goals' in prediction_type or 'both_teams_score' in prediction_type:
+                zip_pred = self.zip_model.predict_match(
+                    home_team, away_team, league, prediction_type
+                )
+                zip_pred['model_weight'] = 0.25  # 25% del peso para goles
+                zip_pred['model_category'] = 'zip'
+                predictions.append(zip_pred)
+            
+            # 4. Modelo Random Forest para shots/corners (peso alto para no-goles)
+            if 'shots' in prediction_type or 'corners' in prediction_type:
+                rf_pred = self.random_forest_model.predict_match(
+                    home_team, away_team, league, prediction_type
+                )
+                rf_pred['model_weight'] = 0.25  # 25% del peso para shots/corners
+                rf_pred['model_category'] = 'random_forest'
+                predictions.append(rf_pred)
+            
+            # 5. Modelo de características avanzadas (peso medio)
             advanced_pred = self._get_advanced_features_prediction(
                 home_team, away_team, league, prediction_type
             )
-            advanced_pred['model_weight'] = 0.2  # 20% del peso
+            advanced_pred['model_weight'] = 0.15  # 15% del peso
             advanced_pred['model_category'] = 'advanced'
             predictions.append(advanced_pred)
             

@@ -262,66 +262,65 @@
         </div>
     </div>
     
-    <!-- Archivos Importados -->
+    <!-- Equipos y Fechas por Liga -->
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5><i class="fas fa-history"></i> Archivos Importados Recientemente</h5>
-                {% if imported_files %}
-                    <button type="button" class="btn btn-sm btn-outline-danger" 
-                            onclick="confirmDeleteAllFiles()" 
-                            title="Eliminar todos los archivos y datos">
-                        <i class="fas fa-trash-alt"></i> Eliminar Todo
-                    </button>
-                {% endif %}
+            <div class="card-header">
+                <h5><i class="fas fa-calendar-alt"></i> Fechas de Partidos por Liga y Equipo</h5>
+                <small class="text-muted">Última fecha almacenada para saber desde dónde alimentar</small>
             </div>
-            <div class="card-body">
-                {% if imported_files %}
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Archivo</th>
-                                    <th>Liga</th>
-                                    <th>Partidos</th>
-                                    <th>Fecha</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for file in imported_files %}
-                                <tr>
-                                    <td>
-                                        <i class="fas fa-file-excel text-success"></i>
-                                        {{ file.name|truncatechars:20 }}
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ file.league.name }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-primary">{{ file.imported_rows }}</span>
-                                        {% if file.failed_rows > 0 %}
-                                            <span class="badge bg-warning">{{ file.failed_rows }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ file.imported_at|date:"d/m/Y H:i" }}</td>
-                                    <td>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" 
-                                                onclick="confirmDeleteFile({{ file.id }}, '{{ file.name }}')"
-                                                title="Eliminar archivo y sus datos">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+            <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                {% if leagues_data %}
+                    {% for league_data in leagues_data %}
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">
+                                <i class="fas fa-trophy text-warning"></i> 
+                                <strong>{{ league_data.league.name }}</strong>
+                                <span class="badge bg-secondary ms-2">{{ league_data.teams|length }} equipos</span>
+                            </h6>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Equipo</th>
+                                            <th>Primera Fecha</th>
+                                            <th>Última Fecha</th>
+                                            <th>Partidos</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for team in league_data.teams %}
+                                        <tr>
+                                            <td>
+                                                <i class="fas fa-shield-alt text-primary"></i>
+                                                {{ team.name }}
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {{ team.first_date|date:"d/m/Y" }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-success">
+                                                    {{ team.last_date|date:"d/m/Y" }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">{{ team.total_matches }}</span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    {% endfor %}
                 {% else %}
                     <div class="text-center py-4">
-                        <i class="fas fa-history fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">No hay archivos importados aún.</p>
-                        <p class="text-muted">Carga tu primer archivo Excel usando el formulario.</p>
+                        <i class="fas fa-database fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay datos en la base de datos aún.</p>
+                        <p class="text-muted">Importa tu primer archivo Excel para comenzar.</p>
                     </div>
                 {% endif %}
             </div>
@@ -598,48 +597,5 @@
         }, 60000);
     });
     
-    // Función para confirmar eliminación de archivo
-    function confirmDeleteFile(fileId, fileName) {
-        if (confirm(`⚠️ ¿Estás seguro de que quieres eliminar el archivo "${fileName}"?\n\nEsto eliminará:\n- El archivo y su registro\n- Todos los partidos importados de este archivo\n- La liga asociada (si no tiene más partidos)\n\nEsta acción NO se puede deshacer.`)) {
-            // Crear formulario para enviar POST
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `{% url 'football_data:delete_file' 0 %}`.replace('0', fileId);
-            
-            // Agregar token CSRF
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-            const csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = 'csrfmiddlewaretoken';
-            csrfInput.value = csrfToken;
-            form.appendChild(csrfInput);
-            
-            // Agregar al DOM y enviar
-            document.body.appendChild(form);
-            form.submit();
-        }
-    }
-    
-    // Función para confirmar eliminación de todos los archivos
-    function confirmDeleteAllFiles() {
-        if (confirm(`🚨 ¿Estás seguro de que quieres eliminar TODOS los archivos?\n\nEsto eliminará:\n- Todos los archivos importados\n- Todos los partidos de la base de datos\n- Todas las ligas\n- Todos los datos históricos\n\nEsta acción NO se puede deshacer.`)) {
-            // Crear formulario para enviar POST
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `{% url 'football_data:delete_all_files' %}`;
-            
-            // Agregar token CSRF
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-            const csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = 'csrfmiddlewaretoken';
-            csrfInput.value = csrfToken;
-            form.appendChild(csrfInput);
-            
-            // Agregar al DOM y enviar
-            document.body.appendChild(form);
-            form.submit();
-        }
-    }
 </script>
 {% endblock %}

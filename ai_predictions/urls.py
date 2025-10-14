@@ -26,5 +26,6 @@ urlpatterns = [
     # APIs
     path('api/teams/<int:league_id>/', views.GetTeamsView.as_view(), name='get_teams'),
     path('api/prediction-progress/', views.PredictionProgressView.as_view(), name='prediction_progress'),
+    path('api/league-historical-data/<int:league_id>/', views.LeagueHistoricalDataView.as_view(), name='league_historical_data'),
     path('test-predictions/', views.TestPredictionsView.as_view(), name='test_predictions'),
 ]

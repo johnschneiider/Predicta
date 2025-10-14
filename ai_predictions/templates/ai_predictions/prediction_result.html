@@ -324,6 +324,7 @@
                         </thead>
                         <tbody>
                             {% for model_pred in prediction.predictions %}
+                            {% if model_pred.model_name == "Predicción Oficial" %}
                             <tr class="model-row">
                                 <td>
                                     <div class="d-flex align-items-center">
@@ -479,6 +480,7 @@
                                     </small>
                                 </td>
                             </tr>
+                            {% endif %}
                             {% endfor %}
                         </tbody>
                     </table>

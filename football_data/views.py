@@ -1112,19 +1112,44 @@ class AnalysisView(View):
         from ai_predictions.xg_shots_model import xg_shots_model
         from ai_predictions.simple_models import ModeloHibridoCorners, ModeloHibridoGeneral
         
-        # Obtener partidos de las próximas 24 horas
+        # Obtener partidos de las próximas horas para TODAS las ligas presentes en la BD
         odds_service = OddsAPIService()
-        # Compatibilidad con versiones antiguas de OddsAPIService que no aceptan
-        # el parámetro include_multiple_sports en producción
-        try:
-            upcoming_matches = odds_service.get_upcoming_matches(
-                sport_key='soccer_epl',
-                include_multiple_sports=True
-            )
-        except TypeError:
-            upcoming_matches = odds_service.get_upcoming_matches(
-                sport_key='soccer_epl'
-            )
+        # Mapa de nombres de ligas -> sport_key de The Odds API
+        league_to_sport_key = {
+            'premier league': 'soccer_epl',
+            'la liga': 'soccer_spain_la_liga',
+            'serie a': 'soccer_italy_serie_a',
+            'bundesliga': 'soccer_germany_bundesliga',
+            'ligue 1': 'soccer_france_ligue_one',
+            'ligue one': 'soccer_france_ligue_one',
+            'eredivisie': 'soccer_netherlands_eredivisie',
+            'primeira liga': 'soccer_portugal_primeira_liga',
+            'super lig': 'soccer_turkey_super_league',
+            'super league': 'soccer_china_superleague',
+            'a-league': 'soccer_australia_aleague',
+            'champions league': 'soccer_uefa_champs_league',
+        }
+
+        # Construir set de sport_keys a consultar según las ligas existentes en BD
+        sport_keys_to_fetch = set()
+        for db_league in League.objects.all():
+            name_norm = (db_league.name or '').lower()
+            for alias, s_key in league_to_sport_key.items():
+                if alias in name_norm:
+                    sport_keys_to_fetch.add(s_key)
+        # Como fallback mínimo, incluir EPL para no devolver vacío
+        if not sport_keys_to_fetch:
+            sport_keys_to_fetch.add('soccer_epl')
+
+        upcoming_matches = []
+        for s_key in sport_keys_to_fetch:
+            try:
+                matches = odds_service.get_upcoming_matches(sport_key=s_key)
+                if matches:
+                    upcoming_matches.extend(matches)
+            except Exception:
+                # Ignorar ligas no soportadas por la API en este momento
+                continue
         
         # Filtrar solo partidos de las próximas 24 horas
         # Asegurar que now esté en UTC para comparar correctamente

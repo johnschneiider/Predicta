@@ -1,0 +1,464 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Predicción de Puntos NBA - Predicta{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/basketball_data/prediction.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-header">
+                <h1><i class="fas fa-crystal-ball"></i> Predicción de Puntos Totales</h1>
+                <p class="text-muted">Selecciona dos equipos para predecir los puntos totales del partido</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="prediction-card">
+                <div class="card-header">
+                    <h5><i class="fas fa-basketball-ball"></i> Seleccionar Equipos</h5>
+                </div>
+                <div class="card-body">
+                    {% if error %}
+                        <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-triangle"></i> {{ error }}
+                        </div>
+                    {% endif %}
+
+                    <form method="post" id="predictionForm" action="{% url 'basketball_data:prediction_form' %}">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.home_team.id_for_label }}" class="form-label">
+                                        <i class="fas fa-home"></i> {{ form.home_team.label }}
+                                    </label>
+                                    {{ form.home_team }}
+                                    {% if form.home_team.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.home_team.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.away_team.id_for_label }}" class="form-label">
+                                        <i class="fas fa-plane"></i> {{ form.away_team.label }}
+                                    </label>
+                                    {{ form.away_team }}
+                                    {% if form.away_team.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.away_team.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary btn-lg" id="predictBtn" style="background-color: #00ABE4 !important; border-color: #00ABE4 !important; color: white !important;" onmouseover="this.style.backgroundColor='#0099CC' !important" onmouseout="this.style.backgroundColor='#00ABE4' !important">
+                                <i class="fas fa-magic"></i> Predecir Puntos Totales
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-lg" onclick="clearForm()">
+                                <i class="fas fa-eraser"></i> Limpiar
+                            </button>
+                            
+                            <!-- Spinner de carga -->
+                            <div class="d-none mt-3" id="loadingSpinner">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Cargando...</span>
+                                </div>
+                                <p class="text-primary mt-2">Iniciando análisis NBA...</p>
+                            </div>
+                            
+                            <!-- Barra de Progreso -->
+                            <div class="card border-0 shadow-sm mt-4 d-none" id="progressContainer">
+                                <div class="card-body text-center">
+                                    <h5 class="text-primary mb-3">
+                                        <i class="fas fa-basketball-ball"></i> Generando Predicciones NBA
+                                    </h5>
+                                    <div class="progress mb-3" style="height: 25px;">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
+                                             id="progressBar" role="progressbar" style="width: 0%">
+                                            <span style="position: relative; z-index: 1;">0%</span>
+                                        </div>
+                                    </div>
+                                    <p class="text-primary mb-2" id="progressText">Iniciando análisis de equipos...</p>
+                                    <small class="text-muted" id="progressDetails">Preparando modelos de predicción</small>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Predicción rápida -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-bolt"></i> Predicción Rápida</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Equipo Local</label>
+                                <select class="form-control" id="quickHomeTeam">
+                                    <option value="">Selecciona equipo local</option>
+                                    {% for team in form.home_team.field.queryset %}
+                                        <option value="{{ team.id }}">{{ team.full_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Equipo Visitante</label>
+                                <select class="form-control" id="quickAwayTeam">
+                                    <option value="">Selecciona equipo visitante</option>
+                                    {% for team in form.away_team.field.queryset %}
+                                        <option value="{{ team.id }}">{{ team.full_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-3">
+                        <button type="button" class="btn btn-success" onclick="quickPredict()">
+                            <i class="fas fa-rocket"></i> Predicción Instantánea
+                        </button>
+                    </div>
+                    
+                    <!-- Resultado de predicción rápida -->
+                    <div id="quickResult" class="mt-4" style="display: none;">
+                        <div class="prediction-result">
+                            <h6>Predicción:</h6>
+                            <div class="result-value" id="quickPredictionValue">-</div>
+                            <div class="result-details" id="quickPredictionDetails"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Barra de carga global -->
+<div id="globalLoadingBar" class="loading-overlay" style="display: none;">
+    <div class="loading-container">
+        <div class="loading-content">
+            <div class="loading-spinner">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+            </div>
+            <div class="loading-text">
+                <h5 id="loadingTitle">Procesando...</h5>
+                <p id="loadingMessage">Por favor espera mientras procesamos tu solicitud</p>
+            </div>
+            <div class="loading-progress">
+                <div class="progress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 0%" id="loadingProgressBar">
+                    </div>
+                </div>
+                <small class="text-muted" id="loadingPercentage">0%</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Variable para prevenir envíos duplicados
+let isProcessing = false;
+
+// Manejar envío del formulario principal
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form[method="post"]');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevenir envío normal
+            e.stopPropagation(); // Prevenir propagación
+            
+            // Prevenir envíos duplicados
+            if (isProcessing) {
+                console.log('Ya hay un procesamiento en curso');
+                return false;
+            }
+            
+            isProcessing = true;
+            
+            const submitBtn = document.getElementById('predictBtn');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const progressContainer = document.getElementById('progressContainer');
+            
+            console.log('Iniciando predicción NBA...');
+            
+            // Mostrar barra de progreso inmediatamente
+            if (submitBtn) submitBtn.style.display = 'none';
+            if (loadingSpinner) loadingSpinner.classList.remove('d-none');
+            if (progressContainer) {
+                progressContainer.classList.remove('d-none');
+                console.log('Barra de progreso NBA mostrada');
+            }
+            
+            // Iniciar monitoreo de progreso ANTES de enviar el formulario
+            startProgressMonitoring();
+            
+            // Enviar formulario con AJAX de forma asíncrona
+            const formData = new FormData(form);
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).then(response => {
+                console.log('Respuesta recibida');
+                return response.text();
+            }).catch(error => {
+                console.error('Error:', error);
+                alert('Error procesando predicción NBA');
+                if (submitBtn) submitBtn.style.display = 'block';
+                if (progressContainer) progressContainer.classList.add('d-none');
+                isProcessing = false;
+            });
+            
+            return false;
+        });
+    }
+});
+
+// Función para monitorear el progreso NBA
+function startProgressMonitoring() {
+    console.log('Iniciando monitoreo de progreso NBA...');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const progressDetails = document.getElementById('progressDetails');
+    
+    let checkCount = 0;
+    const maxChecks = 60; // Máximo 30 segundos (60 × 500ms)
+    
+    const interval = setInterval(function() {
+        checkCount++;
+        
+        // Timeout de seguridad reducido a 15 segundos
+        if (checkCount > 30) { // 30 × 500ms = 15 segundos
+            console.log('Timeout alcanzado, verificando resultados...');
+            clearInterval(interval);
+            // Intentar ir a resultados de todos modos
+            setTimeout(function() {
+                window.location.href = '{% url "basketball_data:prediction_result" %}';
+            }, 500);
+            return;
+        }
+        
+        fetch('{% url "basketball_data:prediction_progress" %}')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Progreso NBA:', data);
+                const percentage = Math.round((data.current / data.total) * 100);
+                
+                // Actualizar barra de progreso
+                if (progressBar) {
+                    progressBar.style.width = percentage + '%';
+                    const span = progressBar.querySelector('span');
+                    if (span) {
+                        span.textContent = percentage + '%';
+                    } else {
+                        progressBar.textContent = percentage + '%';
+                    }
+                }
+                
+                // Actualizar texto
+                if (progressText) {
+                    progressText.textContent = 'Procesando: ' + data.current_type;
+                }
+                
+                // Actualizar detalles
+                if (progressDetails) {
+                    progressDetails.textContent = data.current + ' de ' + data.total + ' modelos completados';
+                }
+                
+                // Si está completado, detener el monitoreo y redirigir
+                if (data.status === 'completed' || percentage >= 100 || data.current >= data.total) {
+                    console.log('Predicción NBA completada, redirigiendo...');
+                    clearInterval(interval);
+                    
+                    // Actualizar a 100%
+                    if (progressBar) {
+                        progressBar.style.width = '100%';
+                        const span = progressBar.querySelector('span');
+                        if (span) span.textContent = '100%';
+                    }
+                    
+                    // Mostrar mensaje de completado
+                    if (progressText) {
+                        progressText.textContent = '¡Predicciones NBA completadas!';
+                    }
+                    
+                    // Redirigir después de 500ms
+                    setTimeout(function() {
+                        window.location.href = '{% url "basketball_data:prediction_result" %}';
+                    }, 500);
+                }
+            })
+            .catch(error => {
+                console.error('Error obteniendo progreso NBA:', error);
+            });
+    }, 500); // Consultar cada 500ms para NBA (más rápido que fútbol)
+}
+
+function clearForm() {
+    document.getElementById('predictionForm').reset();
+    document.getElementById('quickHomeTeam').value = '';
+    document.getElementById('quickAwayTeam').value = '';
+    document.getElementById('quickResult').style.display = 'none';
+}
+
+function quickPredict() {
+    const homeTeamId = document.getElementById('quickHomeTeam').value;
+    const awayTeamId = document.getElementById('quickAwayTeam').value;
+    
+    if (!homeTeamId || !awayTeamId) {
+        alert('Por favor selecciona ambos equipos');
+        return;
+    }
+    
+    if (homeTeamId === awayTeamId) {
+        alert('Los equipos deben ser diferentes');
+        return;
+    }
+    
+    showLoadingBar({
+        title: 'Calculando Predicción',
+        message: 'Analizando estadísticas de los equipos y generando predicción...'
+    });
+    
+    fetch('{% url "basketball_data:predict_points" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            home_team_id: homeTeamId,
+            away_team_id: awayTeamId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoadingBar();
+        
+        if (data.error) {
+            alert('Error: ' + data.error);
+        } else {
+            displayQuickResult(data);
+        }
+    })
+    .catch(error => {
+        hideLoadingBar();
+        alert('Error en la predicción: ' + error);
+    });
+}
+
+function displayQuickResult(data) {
+    document.getElementById('quickPredictionValue').textContent = data.predicted_total + ' puntos';
+    
+    // Solo mostrar los puntos totales, sin probabilidades de mercados
+    document.getElementById('quickPredictionDetails').innerHTML = '';
+    document.getElementById('quickResult').style.display = 'block';
+}
+
+// Sincronizar selecciones entre formularios
+document.getElementById('quickHomeTeam').addEventListener('change', function() {
+    document.getElementById('{{ form.home_team.id_for_label }}').value = this.value;
+});
+
+document.getElementById('quickAwayTeam').addEventListener('change', function() {
+    document.getElementById('{{ form.away_team.id_for_label }}').value = this.value;
+});
+
+document.getElementById('{{ form.home_team.id_for_label }}').addEventListener('change', function() {
+    document.getElementById('quickHomeTeam').value = this.value;
+});
+
+document.getElementById('{{ form.away_team.id_for_label }}').addEventListener('change', function() {
+    document.getElementById('quickAwayTeam').value = this.value;
+});
+
+// Funciones para manejar la barra de carga
+function showLoadingBar(config = {}) {
+    const loadingBar = document.getElementById('globalLoadingBar');
+    const title = document.getElementById('loadingTitle');
+    const message = document.getElementById('loadingMessage');
+    const progressBar = document.getElementById('loadingProgressBar');
+    const percentage = document.getElementById('loadingPercentage');
+    
+    // Configurar mensajes
+    title.textContent = config.title || 'Procesando...';
+    message.textContent = config.message || 'Por favor espera mientras procesamos tu solicitud';
+    
+    // Resetear progreso
+    progressBar.style.width = '0%';
+    percentage.textContent = '0%';
+    
+    // Mostrar barra
+    loadingBar.style.display = 'flex';
+    
+    // Simular progreso
+    simulateProgress();
+}
+
+function hideLoadingBar() {
+    const loadingBar = document.getElementById('globalLoadingBar');
+    loadingBar.style.display = 'none';
+    
+    // Limpiar intervalo de progreso
+    if (window.progressInterval) {
+        clearInterval(window.progressInterval);
+    }
+}
+
+function simulateProgress() {
+    const progressBar = document.getElementById('loadingProgressBar');
+    const percentage = document.getElementById('loadingPercentage');
+    let progress = 0;
+    
+    const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress > 90) progress = 90; // No llegar al 100% hasta que termine
+        
+        progressBar.style.width = progress + '%';
+        percentage.textContent = Math.round(progress) + '%';
+        
+        if (progress >= 90) {
+            clearInterval(interval);
+        }
+    }, 200);
+    
+    // Guardar referencia para poder limpiar
+    window.progressInterval = interval;
+}
+</script>
+{% endblock %}

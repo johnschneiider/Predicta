@@ -1223,12 +1223,14 @@ class AnalysisView(View):
                     if league:
                         break
                 
-                # Si no se encuentra la liga, usar la primera disponible como último recurso
+                # Si no se encuentra una liga en BD, crear/usar una por defecto
                 if not league:
-                    league = League.objects.first()
-                    if not league:
-                        # Si no hay ninguna liga en la base de datos, omitir este partido
-                        continue
+                    from django.utils import timezone as dj_tz
+                    default_season = str(dj_tz.now().year)
+                    league, _ = League.objects.get_or_create(
+                        name='Premier League',
+                        defaults={'country': 'England', 'season': default_season, 'active': True}
+                    )
                 
                 # Calcular TODAS las predicciones usando el MISMO sistema que predict
                 import logging

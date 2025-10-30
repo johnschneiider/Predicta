@@ -1,0 +1,329 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Análisis de Partidos - Predicciones Completas{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/football_data/analysis.css' %}">
+<style>
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+    
+    .loading-spinner {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    .spinner {
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+        font-size: 18px;
+        color: #333;
+        font-weight: bold;
+    }
+    
+    .prediction-badge {
+        font-size: 13px;
+        padding: 5px 10px;
+        font-weight: 600;
+    }
+    
+    .table-responsive {
+        max-height: 800px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay" style="display: flex;">
+    <div class="loading-spinner">
+        <div class="spinner"></div>
+        <div class="loading-text">Cargando predicciones...</div>
+        <div class="text-muted mt-2">Analizando datos de los próximos partidos</div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="text-primary"><i class="fas fa-chart-line"></i> Análisis Completo de Predicciones</h1>
+                    <p class="text-muted mb-0">Análisis multi-modelo para los próximos 24 horas</p>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-success">
+                        <i class="fas fa-sync-alt"></i> Actualizado: {{ updated_at|date:"H:i" }}
+                    </span>
+                    <p class="text-muted small mb-0 mt-2">Total partidos: <strong>{{ total_matches }}</strong></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información de Colores -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="alert alert-info d-flex align-items-center">
+                <i class="fas fa-info-circle me-2"></i>
+                <div>
+                    <strong>Leyenda de Colores (Ambos Marcan):</strong>
+                    <span class="badge bg-success ms-2">Verde: ≥60% (Alta probabilidad)</span>
+                    <span class="badge bg-warning ms-2">Amarillo: 40-59% (Probabilidad media)</span>
+                    <span class="badge bg-danger ms-2">Rojo: <40% (Baja probabilidad)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Partidos -->
+    {% if matches %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-futbol"></i> Partidos de las Próximas 24 Horas</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light" style="position: sticky; top: 0; z-index: 10;">
+                                <tr>
+                                    <th>Liga</th>
+                                    <th>Local</th>
+                                    <th>Visitante</th>
+                                    <th>Fecha</th>
+                                    <th>Hora (CO)</th>
+                                    <th class="text-center">Remates Total</th>
+                                    <th class="text-center">Remates Local</th>
+                                    <th class="text-center">Remates Visit.</th>
+                                    <th class="text-center">Remates a Puerta</th>
+                                    <th class="text-center">Goles Total</th>
+                                    <th class="text-center">Goles Local</th>
+                                    <th class="text-center">Goles Visit.</th>
+                                    <th class="text-center">Corners Total</th>
+                                    <th class="text-center">Corners Local</th>
+                                    <th class="text-center">Corners Visit.</th>
+                                    <th class="text-center">Ambos Marcan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for match in matches %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ match.league }}</span>
+                                    </td>
+                                    <td><strong>{{ match.home_team }}</strong></td>
+                                    <td><strong>{{ match.away_team }}</strong></td>
+                                    <td>{{ match.date }}</td>
+                                    <td>
+                                        <i class="fas fa-clock text-primary"></i> {{ match.time }}
+                                    </td>
+                                    <!-- Remates Total -->
+                                    <td class="text-center">
+                                        {% if match.predictions.shots_total %}
+                                            <span class="badge bg-info prediction-badge">
+                                                {{ match.predictions.shots_total.prediction|floatformat:1 }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <!-- Remates Local -->
+                                    <td class="text-center">
+                                        {% if match.predictions.shots_home %}
+                                            <span class="badge bg-info prediction-badge">
+                                                {{ match.predictions.shots_home.prediction|floatformat:1 }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <!-- Remates Visitante -->
+                                    <td class="text-center">
+                                        {% if match.predictions.shots_away %}
+                                            <span class="badge bg-info prediction-badge">
+                                                {{ match.predictions.shots_away.prediction|floatformat:1 }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <!-- Remates a Puerta -->
+                                    <td class="text-center">
+                                        {% if match.predictions.shots_on_target_total %}
+                                            <span class="badge bg-info prediction-badge">
+                                                {{ match.predictions.shots_on_target_total.prediction|floatformat:1 }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <!-- Goles Total -->
+                                    <td class="text-center">
+                                        {% if match.predictions.goals_total %}
+                                            <span class="badge bg-success prediction-badge">
+                                                {{ match.predictions.goals_total.prediction|floatformat:1 }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <!-- Goles Local -->
+                                    <td class="text-center">
+                                        {% if match.predictions.goals_home %}
+                                            <span class="badge bg-success prediction-badge">
+                                                {{ match.predictions.goals_home.prediction|floatformat:1 }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <!-- Goles Visitante -->
+                                    <td class="text-center">
+                                        {% if match.predictions.goals_away %}
+                                            <span class="badge bg-success prediction-badge">
+                                                {{ match.predictions.goals_away.prediction|floatformat:1 }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <!-- Corners Total -->
+                                    <td class="text-center">
+                                        {% if match.predictions.corners_total %}
+                                            <span class="badge bg-warning prediction-badge">
+                                                {{ match.predictions.corners_total.prediction|floatformat:1 }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <!-- Corners Local -->
+                                    <td class="text-center">
+                                        {% if match.predictions.corners_home %}
+                                            <span class="badge bg-warning prediction-badge">
+                                                {{ match.predictions.corners_home.prediction|floatformat:1 }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <!-- Corners Visitante -->
+                                    <td class="text-center">
+                                        {% if match.predictions.corners_away %}
+                                            <span class="badge bg-warning prediction-badge">
+                                                {{ match.predictions.corners_away.prediction|floatformat:1 }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <!-- Ambos Marcan -->
+                                    <td class="text-center">
+                                        {% if match.prediction >= 60 %}
+                                            <span class="badge bg-success fs-6">{{ match.prediction|floatformat:1 }}%</span>
+                                        {% elif match.prediction >= 40 %}
+                                            <span class="badge bg-warning fs-6">{{ match.prediction|floatformat:1 }}%</span>
+                                        {% else %}
+                                            <span class="badge bg-danger fs-6">{{ match.prediction|floatformat:1 }}%</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-warning text-center">
+                <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                <h5>No hay partidos disponibles</h5>
+                <p class="mb-0">No se encontraron partidos programados para las próximas 24 horas.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Información Adicional -->
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="fas fa-cogs fa-2x text-primary mb-2"></i>
+                    <h6>Modelo Utilizado</h6>
+                    <p class="small text-muted mb-0">Predicción Oficial (Ensemble Multi-Modelo)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="fas fa-sync-alt fa-2x text-success mb-2"></i>
+                    <h6>Actualización Automática</h6>
+                    <p class="small text-muted mb-0">Los datos se actualizan al cargar la página</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                    <h6>Zona Horaria</h6>
+                    <p class="small text-muted mb-0">Hora en Colombia (UTC-5)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Mostrar loading overlay al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    const loadingOverlay = document.getElementById('loading-overlay');
+    
+    // Mostrar el loading
+    loadingOverlay.style.display = 'flex';
+    
+    // Ocultar el loading una vez que la página esté completamente cargada
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            loadingOverlay.style.display = 'none';
+        }, 500); // Pequeño delay para que se vea la animación
+    });
+});
+</script>
+{% endblock %}

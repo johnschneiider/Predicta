@@ -3,17 +3,19 @@ Vistas para mostrar datos históricos de fútbol
 """
 
 import os
+from datetime import datetime, timedelta, timezone as tz
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.db.models import Q, Avg, Count, Max, Min
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-# from django.contrib.auth.decorators import login_required  # Temporalmente deshabilitado
+from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.contrib import messages
 from django.conf import settings
+from django.utils import timezone
 
 from .models import League, Match, ExcelFile
 from .services import ExcelImportService
@@ -22,7 +24,7 @@ from django.core.paginator import Paginator
 import json
 
 
-# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class FootballDataDashboardView(View):
     """Dashboard principal de datos de fútbol"""
     
@@ -55,6 +57,7 @@ class FootballDataDashboardView(View):
 
 
 # @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class LeaguesListView(View):
     """Lista de ligas"""
     
@@ -73,6 +76,7 @@ class LeaguesListView(View):
 
 
 # @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class LeagueDetailView(View):
     """Detalle de una liga específica"""
     
@@ -121,6 +125,7 @@ class LeagueDetailView(View):
 
 
 # @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class MatchesListView(View):
     """Lista de partidos"""
     
@@ -174,6 +179,7 @@ class MatchesListView(View):
 
 
 # @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class MatchDetailView(View):
     """Detalle de un partido específico"""
     
@@ -205,6 +211,7 @@ class MatchDetailView(View):
 
 
 # @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class ImportView(View):
     """Vista para importar archivos Excel"""
     
@@ -397,6 +404,7 @@ class ImportView(View):
 
 
 # @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class DeleteFileView(View):
     """Vista para eliminar archivos importados"""
     
@@ -444,6 +452,7 @@ class DeleteFileView(View):
 
 
 # @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class DeleteAllFilesView(View):
     """Vista para eliminar todos los archivos y datos"""
     
@@ -480,6 +489,7 @@ class DeleteAllFilesView(View):
 
 @method_decorator(csrf_exempt, name='dispatch')
 # @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class ImportAjaxView(View):
     """Vista AJAX para importar archivos"""
     
@@ -505,6 +515,7 @@ class ImportAjaxView(View):
 
 
 # @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class StatisticsView(View):
     """Vista de estadísticas"""
     
@@ -622,6 +633,7 @@ class StatisticsView(View):
 
 
 # @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class LeagueDataTableView(View):
     """Vista para mostrar tabla de datos de una liga específica"""
     
@@ -661,6 +673,7 @@ class LeagueDataTableView(View):
 
 
 # @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class MarketsView(View):
     """Vista de análisis de mercados con gráficas"""
     
@@ -1084,3 +1097,295 @@ class MarketsView(View):
             }
         
         return data
+
+
+@method_decorator(login_required, name='dispatch')
+class AnalysisView(View):
+    """Vista de análisis con predicciones de 'ambos marcan' para partidos próximos"""
+    
+    def get(self, request):
+        from odds.services import OddsAPIService
+        from ai_predictions.enhanced_both_teams_score import enhanced_both_teams_score_model
+        from ai_predictions.simple_models import SimplePredictionService
+        from ai_predictions.official_prediction_model import official_prediction_model
+        from ai_predictions.shots_prediction_model import shots_prediction_model
+        from ai_predictions.xg_shots_model import xg_shots_model
+        from ai_predictions.simple_models import ModeloHibridoCorners, ModeloHibridoGeneral
+        
+        # Obtener partidos de las próximas 24 horas
+        odds_service = OddsAPIService()
+        upcoming_matches = odds_service.get_upcoming_matches(
+            sport_key='soccer_epl', 
+            include_multiple_sports=True
+        )
+        
+        # Filtrar solo partidos de las próximas 24 horas
+        # Asegurar que now esté en UTC para comparar correctamente
+        from datetime import timezone as dt_timezone
+        now = timezone.now()
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=dt_timezone.utc)
+        else:
+            # Convertir a UTC si tiene otro timezone
+            now = now.astimezone(dt_timezone.utc)
+        
+        next_24h = now + timedelta(hours=24)
+        
+        import logging
+        logger_init = logging.getLogger('football_data')
+        logger_init.info(f"📅 Filtrando partidos: ahora={now} UTC, límite={next_24h} UTC ({len(upcoming_matches)} partidos obtenidos)")
+        
+        matches_with_predictions = []
+        
+        for match_data in upcoming_matches:
+            # Parsear fecha del partido
+            commence_time_str = match_data.get('commence_time', '')
+            if not commence_time_str:
+                continue
+                
+            try:
+                # Convertir a datetime (UTC)
+                commence_time = datetime.fromisoformat(commence_time_str.replace('Z', '+00:00'))
+                
+                # Asegurar que commence_time tenga timezone (UTC) para comparar
+                from datetime import timezone as dt_timezone
+                if commence_time.tzinfo is None:
+                    commence_time = commence_time.replace(tzinfo=dt_timezone.utc)
+                else:
+                    # Convertir a UTC si tiene otro timezone
+                    commence_time = commence_time.astimezone(dt_timezone.utc)
+                
+                # Obtener equipos ANTES de filtrar (para logging)
+                home_team = match_data.get('home_team', '')
+                away_team = match_data.get('away_team', '')
+                
+                # Filtrar solo los próximos 24 horas
+                # Permitir partidos futuros hasta 24 horas adelante
+                # No filtrar partidos pasados, solo los que están muy lejos en el futuro
+                time_diff = (commence_time - now).total_seconds() / 3600  # Diferencia en horas
+                
+                if time_diff < -2 or time_diff > 24:
+                    # Partido muy pasado (>2 horas) o muy futuro (>24 horas)
+                    import logging
+                    logger_debug = logging.getLogger('football_data')
+                    logger_debug.debug(f"⏰ Partido fuera de rango: {home_team} vs {away_team} - diff: {time_diff:.1f}h ({commence_time} UTC)")
+                    continue
+                
+                # Ya tenemos home_team y away_team, verificar que no estén vacíos
+                if not home_team or not away_team:
+                    continue
+                
+                # Convertir a hora colombiana (UTC-5)
+                colombia_tz = tz(timedelta(hours=-5))
+                colombia_time = commence_time.astimezone(colombia_tz)
+                
+                # Obtener liga desde sport_title o sport_key
+                sport_title = match_data.get('sport_title', '')
+                sport_key = match_data.get('sport_key', '')
+                
+                # Mapear sport_key a nombres de ligas más precisos
+                league_mapping = {
+                    'soccer_epl': 'Premier League',
+                    'soccer_spain_la_liga': 'La Liga',
+                    'soccer_italy_serie_a': 'Serie A',
+                    'soccer_germany_bundesliga': 'Bundesliga',
+                    'soccer_france_ligue_one': 'Ligue 1',
+                    'soccer_netherlands_eredivisie': 'Eredivisie',
+                    'soccer_portugal_primeira_liga': 'Primeira Liga',
+                    'soccer_turkey_super_league': 'Super Lig',
+                    'soccer_argentina_primera_division': 'Primera División',
+                    'soccer_belgium_first_div': 'Pro League',
+                    'soccer_china_superleague': 'Super League',
+                    'soccer_australia_aleague': 'A-League',
+                    'soccer_uefa_champs_league': 'Champions League',
+                }
+                
+                # Buscar la liga en la base de datos
+                league = None
+                search_names = []
+                
+                if sport_key and sport_key in league_mapping:
+                    search_names.append(league_mapping[sport_key])
+                
+                if sport_title:
+                    search_names.append(sport_title)
+                
+                # Buscar liga por múltiples nombres posibles
+                for search_name in search_names:
+                    league = League.objects.filter(name__icontains=search_name).first()
+                    if league:
+                        break
+                
+                # Si no se encuentra la liga, usar la primera disponible como último recurso
+                if not league:
+                    league = League.objects.first()
+                    if not league:
+                        # Si no hay ninguna liga en la base de datos, omitir este partido
+                        continue
+                
+                # Calcular TODAS las predicciones usando el MISMO sistema que predict
+                import logging
+                import numpy as np
+                logger = logging.getLogger('football_data')
+                
+                logger.info(f"🎯 Procesando predicciones completas: {home_team} vs {away_team} en {league.name}")
+                
+                # Todos los tipos de predicción igual que en predict
+                prediction_types = [
+                    'shots_total', 'shots_home', 'shots_away',
+                    'shots_on_target_total',
+                    'goals_total', 'goals_home', 'goals_away',
+                    'corners_total', 'corners_home', 'corners_away',
+                    'both_teams_score'
+                ]
+                
+                simple_service = SimplePredictionService()
+                all_predictions_by_type = {}
+                
+                # Procesar cada tipo de predicción
+                for pred_type in prediction_types:
+                    try:
+                        predictions = []
+                        
+                        # 1. Modelos simples (shots tiene manejo especial)
+                        if 'shots' in pred_type:
+                            try:
+                                if pred_type == 'shots_total':
+                                    pred1 = shots_prediction_model.predict_shots_total(home_team, away_team, league)
+                                elif pred_type == 'shots_home':
+                                    pred1 = shots_prediction_model.predict_shots_home(home_team, away_team, league)
+                                elif pred_type == 'shots_away':
+                                    pred1 = shots_prediction_model.predict_shots_away(home_team, away_team, league)
+                                elif pred_type == 'shots_on_target_total':
+                                    pred1 = shots_prediction_model.predict_shots_on_target_total(home_team, away_team, league)
+                                else:
+                                    pred1 = None
+                                
+                                if pred1:
+                                    predictions.append(pred1)
+                            except Exception as e:
+                                logger.warning(f"⚠️ Error en shots_prediction_model para {pred_type}: {e}")
+                            
+                            try:
+                                if pred_type == 'shots_total':
+                                    pred2 = xg_shots_model.predict_shots_total(home_team, away_team, league)
+                                elif pred_type == 'shots_home':
+                                    pred2 = xg_shots_model.predict_shots_home(home_team, away_team, league)
+                                elif pred_type == 'shots_away':
+                                    pred2 = xg_shots_model.predict_shots_away(home_team, away_team, league)
+                                elif pred_type == 'shots_on_target_total':
+                                    pred2 = xg_shots_model.predict_shots_on_target_total(home_team, away_team, league)
+                                else:
+                                    pred2 = None
+                                
+                                if pred2:
+                                    predictions.append(pred2)
+                            except Exception as e:
+                                logger.warning(f"⚠️ Error en xg_shots_model para {pred_type}: {e}")
+                        else:
+                            # Para otros tipos, usar modelos simples
+                            try:
+                                simple_predictions = simple_service.get_all_simple_predictions(
+                                    home_team, away_team, league, pred_type
+                                )
+                                predictions.extend(simple_predictions)
+                            except Exception as e:
+                                logger.warning(f"⚠️ Error obteniendo modelos simples para {pred_type}: {e}")
+                        
+                        # 2. Manejo especial para both_teams_score (enhanced)
+                        if pred_type == 'both_teams_score':
+                            try:
+                                enhanced_prob = enhanced_both_teams_score_model.predict(
+                                    home_team, away_team, league
+                                )
+                                enhanced_prediction = {
+                                    'model_name': 'Enhanced Both Teams Score',
+                                    'prediction': enhanced_prob,
+                                    'confidence': 0.80,
+                                    'probabilities': {'both_score': enhanced_prob},
+                                    'total_matches': 100
+                                }
+                                predictions.append(enhanced_prediction)
+                            except Exception as e:
+                                logger.warning(f"⚠️ Error en enhanced model para {pred_type}: {e}")
+                        
+                        # 3. Agregar modelos híbridos
+                        if 'corners' in pred_type:
+                            try:
+                                hybrid_model = ModeloHibridoCorners()
+                                hybrid_prediction = hybrid_model.predecir(home_team, away_team, league, pred_type)
+                                predictions.append(hybrid_prediction)
+                            except Exception as e:
+                                logger.warning(f"⚠️ Error en modelo híbrido corners para {pred_type}: {e}")
+                        elif 'shots' not in pred_type and 'both_teams_score' not in pred_type:
+                            try:
+                                hybrid_model = ModeloHibridoGeneral()
+                                hybrid_prediction = hybrid_model.predecir(home_team, away_team, league, pred_type)
+                                predictions.append(hybrid_prediction)
+                            except Exception as e:
+                                logger.warning(f"⚠️ Error en modelo híbrido general para {pred_type}: {e}")
+                        
+                        all_predictions_by_type[pred_type] = predictions
+                        
+                    except Exception as e:
+                        logger.error(f"❌ Error procesando {pred_type}: {e}")
+                        all_predictions_by_type[pred_type] = []
+                
+                # 4. Calcular predicción oficial (promedio ponderado) para cada tipo
+                official_predictions = official_prediction_model.calculate_official_predictions(all_predictions_by_type)
+                
+                # Preparar resultados finales
+                match_predictions = {}
+                for pred_type, official_pred in official_predictions.items():
+                    if official_pred and 'prediction' in official_pred:
+                        match_predictions[pred_type] = {
+                            'prediction': official_pred['prediction'],
+                            'confidence': official_pred.get('confidence', 0.5),
+                            'probabilities': official_pred.get('probabilities', {}),
+                            'total_matches': official_pred.get('total_matches', 0),
+                        }
+                
+                # Extraer valores específicos para la plantilla
+                both_teams_score_pct = match_predictions.get('both_teams_score', {}).get('prediction', 0.5) * 100
+                probability = match_predictions.get('both_teams_score', {}).get('prediction', 0.5)
+                
+                # Agregar partido con todas las predicciones
+                matches_with_predictions.append({
+                    'league': league.name,
+                    'home_team': home_team,
+                    'away_team': away_team,
+                    'date': colombia_time.strftime('%d/%m/%Y'),
+                    'time': colombia_time.strftime('%H:%M'),
+                    # Ambos marcan (para compatibilidad)
+                    'prediction': both_teams_score_pct,
+                    'probability': probability,
+                    # Todas las predicciones
+                    'predictions': match_predictions,
+                })
+                
+                import logging
+                logger_success = logging.getLogger('football_data')
+                logger_success.info(f"✅ Partido agregado: {home_team} vs {away_team} - Ambos Marcan: {both_teams_score_pct:.1f}%")
+                
+            except Exception as e:
+                # Continuar con el siguiente partido si hay error
+                import logging
+                logger_error = logging.getLogger('football_data')
+                logger_error.error(f"❌ Error procesando partido {match_data.get('home_team', '?')} vs {match_data.get('away_team', '?')}: {e}", exc_info=True)
+                continue
+        
+        # Log final
+        import logging
+        logger_final = logging.getLogger('football_data')
+        logger_final.info(f"📊 Total partidos procesados: {len(matches_with_predictions)} de {len(upcoming_matches)} obtenidos")
+        
+        # Ordenar por fecha y hora
+        matches_with_predictions.sort(key=lambda x: (x['date'], x['time']))
+        
+        context = {
+            'matches': matches_with_predictions,
+            'total_matches': len(matches_with_predictions),
+            'updated_at': timezone.now(),
+        }
+        
+        return render(request, 'football_data/analysis.html', context)

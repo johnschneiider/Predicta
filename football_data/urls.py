@@ -22,4 +22,5 @@ urlpatterns = [
     path('markets/', views.MarketsView.as_view(), name='markets'),
     path('shots/', ShotsAnalysisView.as_view(), name='shots'),
     path('league-data/', views.LeagueDataTableView.as_view(), name='league_data_table'),
+    path('analysis/', views.AnalysisView.as_view(), name='analysis'),
 ]

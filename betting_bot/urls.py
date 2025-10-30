@@ -20,14 +20,16 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import redirect
 from django.views.generic import RedirectView
-# from django.contrib.auth.decorators import login_required  # Temporalmente deshabilitado
+from django.contrib.auth.decorators import login_required
+from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('cuentas/', include('cuentas.urls')),
-    path('', RedirectView.as_view(pattern_name='odds:dashboard', permanent=False), name='home'),
+    path('', views.landing_page, name='home'),
     path('odds/', include('odds.urls')),
-    path('football/', include('football_data.urls')),
+    path('football_data/', include('football_data.urls')),
+    path('basketball/', include('basketball_data.urls')),
     path('ai/', include('ai_predictions.urls')),
 ]
 

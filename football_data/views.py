@@ -1223,14 +1223,27 @@ class AnalysisView(View):
                     if league:
                         break
                 
-                # Si no se encuentra una liga en BD, crear/usar una por defecto
+                # Si aún no hay liga, inferirla por equipos usando histórico local
                 if not league:
-                    from django.utils import timezone as dj_tz
-                    default_season = str(dj_tz.now().year)
-                    league, _ = League.objects.get_or_create(
-                        name='Premier League',
-                        defaults={'country': 'England', 'season': default_season, 'active': True}
+                    league_ids = list(
+                        Match.objects.filter(Q(home_team__iexact=home_team) | Q(away_team__iexact=home_team))
+                        .values_list('league_id', flat=True)[:1]
                     )
+                    if not league_ids:
+                        league_ids = list(
+                            Match.objects.filter(Q(home_team__iexact=away_team) | Q(away_team__iexact=away_team))
+                            .values_list('league_id', flat=True)[:1]
+                        )
+                    if league_ids:
+                        league = League.objects.filter(id=league_ids[0]).first()
+
+                # Como último recurso, no crear ligas ficticias: si no hay liga, salta el partido
+                if not league:
+                    import logging
+                    logging.getLogger('football_data').info(
+                        f"❕ Sin liga para {home_team} vs {away_team}; partido omitido"
+                    )
+                    continue
                 
                 # Calcular TODAS las predicciones usando el MISMO sistema que predict
                 import logging

@@ -1166,16 +1166,16 @@ class AnalysisView(View):
                 home_team = match_data.get('home_team', '')
                 away_team = match_data.get('away_team', '')
                 
-                # Filtrar solo los próximos 24 horas
+                # Filtrar solo los próximos 24 horas (tolerancia ampliada a 36h en prod)
                 # Permitir partidos futuros hasta 24 horas adelante
                 # No filtrar partidos pasados, solo los que están muy lejos en el futuro
                 time_diff = (commence_time - now).total_seconds() / 3600  # Diferencia en horas
                 
-                if time_diff < -2 or time_diff > 24:
-                    # Partido muy pasado (>2 horas) o muy futuro (>24 horas)
+                if time_diff < -2 or time_diff > 36:
+                    # Partido muy pasado (>2h) o demasiado futuro (>36h)
                     import logging
-                    logger_debug = logging.getLogger('football_data')
-                    logger_debug.debug(f"⏰ Partido fuera de rango: {home_team} vs {away_team} - diff: {time_diff:.1f}h ({commence_time} UTC)")
+                    logger_info = logging.getLogger('football_data')
+                    logger_info.info(f"⏰ Fuera de rango (descartado): {home_team} vs {away_team} - diff {time_diff:.1f}h, kickoff {commence_time} UTC")
                     continue
                 
                 # Ya tenemos home_team y away_team, verificar que no estén vacíos

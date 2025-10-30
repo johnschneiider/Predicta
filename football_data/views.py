@@ -1114,10 +1114,17 @@ class AnalysisView(View):
         
         # Obtener partidos de las próximas 24 horas
         odds_service = OddsAPIService()
-        upcoming_matches = odds_service.get_upcoming_matches(
-            sport_key='soccer_epl', 
-            include_multiple_sports=True
-        )
+        # Compatibilidad con versiones antiguas de OddsAPIService que no aceptan
+        # el parámetro include_multiple_sports en producción
+        try:
+            upcoming_matches = odds_service.get_upcoming_matches(
+                sport_key='soccer_epl',
+                include_multiple_sports=True
+            )
+        except TypeError:
+            upcoming_matches = odds_service.get_upcoming_matches(
+                sport_key='soccer_epl'
+            )
         
         # Filtrar solo partidos de las próximas 24 horas
         # Asegurar que now esté en UTC para comparar correctamente

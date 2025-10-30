@@ -1,0 +1,62 @@
+/* Estilos para la página de análisis de ambos marcan */
+
+.table-responsive {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.table thead th {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa;
+    z-index: 10;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.badge {
+    font-weight: 500;
+    padding: 0.5em 0.75em;
+}
+
+.card-header {
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.alert-info {
+    border-left: 4px solid #0dcaf0;
+}
+
+.text-muted {
+    color: #6c757d !important;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.bg-light {
+    background-color: #f8f9fa !important;
+}
+
+/* Mejorar contraste de badges azules y amarillas para texto blanco */
+.badge.bg-info {
+  background-color: #0a58ca !important; /* azul más oscuro */
+  color: #ffffff !important;
+}
+
+.badge.bg-warning {
+  background-color: #b76e00 !important; /* amarillo más oscuro */
+  color: #ffffff !important;
+}
+
+/* Opcional: ligero realce para legibilidad */
+.badge.bg-info, .badge.bg-warning, .badge.bg-success, .badge.bg-danger {
+  text-shadow: 0 1px 0 rgba(0,0,0,0.25);
+}
+
+

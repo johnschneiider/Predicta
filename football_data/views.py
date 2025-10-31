@@ -1150,6 +1150,16 @@ class AnalysisView(View):
             except Exception:
                 # Ignorar ligas no soportadas por la API en este momento
                 continue
+
+        # Limitar el número de partidos a procesar para evitar timeouts en producción
+        import os
+        try:
+            max_matches = int(os.getenv('ANALYSIS_MAX_MATCHES', '20'))
+        except Exception:
+            max_matches = 20
+        if len(upcoming_matches) > max_matches:
+            logger.info(f"🔻 Limitando partidos a procesar: {max_matches} de {len(upcoming_matches)} totales")
+            upcoming_matches = upcoming_matches[:max_matches]
         
         # Filtrar solo partidos de las próximas 24 horas
         # Asegurar que now esté en UTC para comparar correctamente

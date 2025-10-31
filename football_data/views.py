@@ -1285,9 +1285,9 @@ class AnalysisView(View):
                 # Calcular TODAS las predicciones usando el MISMO sistema que predict
                 import logging
                 import numpy as np
-                logger = logging.getLogger('football_data')
+                local_logger = logging.getLogger('football_data')
                 
-                logger.info(f"🎯 Procesando predicciones completas: {home_team} vs {away_team} en {league.name}")
+                local_logger.info(f"🎯 Procesando predicciones completas: {home_team} vs {away_team} en {league.name}")
                 
                 # Todos los tipos de predicción igual que en predict
                 prediction_types = [
@@ -1323,7 +1323,7 @@ class AnalysisView(View):
                                 if pred1:
                                     predictions.append(pred1)
                             except Exception as e:
-                                logger.warning(f"⚠️ Error en shots_prediction_model para {pred_type}: {e}")
+                                local_logger.warning(f"⚠️ Error en shots_prediction_model para {pred_type}: {e}")
                             
                             try:
                                 if pred_type == 'shots_total':
@@ -1340,7 +1340,7 @@ class AnalysisView(View):
                                 if pred2:
                                     predictions.append(pred2)
                             except Exception as e:
-                                logger.warning(f"⚠️ Error en xg_shots_model para {pred_type}: {e}")
+                                local_logger.warning(f"⚠️ Error en xg_shots_model para {pred_type}: {e}")
                         else:
                             # Para otros tipos, usar modelos simples
                             try:
@@ -1349,7 +1349,7 @@ class AnalysisView(View):
                                 )
                                 predictions.extend(simple_predictions)
                             except Exception as e:
-                                logger.warning(f"⚠️ Error obteniendo modelos simples para {pred_type}: {e}")
+                                local_logger.warning(f"⚠️ Error obteniendo modelos simples para {pred_type}: {e}")
                         
                         # 2. Manejo especial para both_teams_score (enhanced)
                         if pred_type == 'both_teams_score':
@@ -1366,7 +1366,7 @@ class AnalysisView(View):
                                 }
                                 predictions.append(enhanced_prediction)
                             except Exception as e:
-                                logger.warning(f"⚠️ Error en enhanced model para {pred_type}: {e}")
+                                local_logger.warning(f"⚠️ Error en enhanced model para {pred_type}: {e}")
                         
                         # 3. Agregar modelos híbridos
                         if 'corners' in pred_type:
@@ -1375,19 +1375,19 @@ class AnalysisView(View):
                                 hybrid_prediction = hybrid_model.predecir(home_team, away_team, league, pred_type)
                                 predictions.append(hybrid_prediction)
                             except Exception as e:
-                                logger.warning(f"⚠️ Error en modelo híbrido corners para {pred_type}: {e}")
+                                local_logger.warning(f"⚠️ Error en modelo híbrido corners para {pred_type}: {e}")
                         elif 'shots' not in pred_type and 'both_teams_score' not in pred_type:
                             try:
                                 hybrid_model = ModeloHibridoGeneral()
                                 hybrid_prediction = hybrid_model.predecir(home_team, away_team, league, pred_type)
                                 predictions.append(hybrid_prediction)
                             except Exception as e:
-                                logger.warning(f"⚠️ Error en modelo híbrido general para {pred_type}: {e}")
+                                local_logger.warning(f"⚠️ Error en modelo híbrido general para {pred_type}: {e}")
                         
                         all_predictions_by_type[pred_type] = predictions
                         
                     except Exception as e:
-                        logger.error(f"❌ Error procesando {pred_type}: {e}")
+                        local_logger.error(f"❌ Error procesando {pred_type}: {e}")
                         all_predictions_by_type[pred_type] = []
                 
                 # 4. Calcular predicción oficial (promedio ponderado) para cada tipo

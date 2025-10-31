@@ -21,7 +21,6 @@ from django.conf.urls.static import static
 from django.shortcuts import redirect
 from django.views.generic import RedirectView
 from django.contrib.auth.decorators import login_required
-import importlib.util
 from . import views
 
 urlpatterns = [
@@ -35,8 +34,8 @@ urlpatterns = [
     path('ai/', include(('ai_predictions.urls', 'ai_predictions'), namespace='ai_predictions')),
 ]
 
-# Incluir rutas de basketball solo si el módulo existe en el entorno
-if importlib.util.find_spec('basketball_data'):
+# Incluir rutas de basketball solo si la app está activa en INSTALLED_APPS
+if 'basketball_data' in settings.INSTALLED_APPS:
     urlpatterns += [
         path('basketball/', include(('basketball_data.urls', 'basketball_data'), namespace='basketball_data')),
     ]

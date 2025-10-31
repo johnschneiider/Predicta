@@ -28,6 +28,8 @@ urlpatterns = [
     path('cuentas/', include(('cuentas.urls', 'cuentas'), namespace='cuentas')),
     # Compatibilidad: nombre global 'panel_usuarios' sin depender de namespaces
     path('cuentas/admin/usuarios/compat/', RedirectView.as_view(url='/cuentas/admin/usuarios/', permanent=True), name='panel_usuarios'),
+    # Alias adicional directo por compatibilidad extrema
+    path('panel_usuarios/', RedirectView.as_view(url='/cuentas/admin/usuarios/', permanent=True), name='panel_usuarios'),
     path('', views.landing_page, name='home'),
     path('odds/', include(('odds.urls', 'odds'), namespace='odds')),
     path('football_data/', include(('football_data.urls', 'football_data'), namespace='football_data')),

@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth import authenticate
+from django.contrib.auth.decorators import user_passes_test
 from .models import Usuario
 
 class FormularioLogin(AuthenticationForm):
@@ -31,9 +32,10 @@ class FormularioLogin(AuthenticationForm):
             # Buscar usuario por email
             try:
                 user = Usuario.objects.get(email=email)
+                # Usar email para autenticación ya que USERNAME_FIELD = 'email'
                 self.user_cache = authenticate(
                     self.request,
-                    username=user.username,
+                    username=user.email,  # Usar email en lugar de username
                     password=password
                 )
                 if self.user_cache is None:
@@ -105,6 +107,8 @@ class FormularioRegistro(UserCreationForm):
         user.email = self.cleaned_data['email']
         user.first_name = self.cleaned_data['first_name']
         user.last_name = self.cleaned_data['last_name']
+        # Asegurar que la contraseña quede hasheada correctamente
+        user.set_password(self.cleaned_data['password1'])
         
         # Generar username único basado en el email
         base_username = user.email.split('@')[0]
@@ -118,3 +122,139 @@ class FormularioRegistro(UserCreationForm):
         if commit:
             user.save()
         return user
+
+class FormularioCrearUsuario(forms.ModelForm):
+    """
+    Formulario para que los administradores creen usuarios
+    """
+    password1 = forms.CharField(
+        label="Contraseña",
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Mínimo 8 caracteres'
+        }),
+        help_text="La contraseña debe tener al menos 8 caracteres."
+    )
+    password2 = forms.CharField(
+        label="Confirmar contraseña",
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Repite la contraseña'
+        })
+    )
+
+    class Meta:
+        model = Usuario
+        fields = ('email', 'first_name', 'last_name', 'is_active', 'is_staff')
+        widgets = {
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'usuario@ejemplo.com'
+            }),
+            'first_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombre del usuario'
+            }),
+            'last_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Apellido del usuario'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'is_staff': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+        }
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if Usuario.objects.filter(email=email).exists():
+            raise forms.ValidationError("Ya existe una cuenta con este correo electrónico.")
+        return email
+
+    def clean_password2(self):
+        password1 = self.cleaned_data.get("password1")
+        password2 = self.cleaned_data.get("password2")
+        if password1 and password2 and password1 != password2:
+            raise forms.ValidationError("Las contraseñas no coinciden.")
+        return password2
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.set_password(self.cleaned_data["password1"])
+        
+        # Generar username único basado en el email
+        base_username = user.email.split('@')[0]
+        username = base_username
+        counter = 1
+        while Usuario.objects.filter(username=username).exists():
+            username = f"{base_username}{counter}"
+            counter += 1
+        user.username = username
+        
+        if commit:
+            user.save()
+        return user
+
+class FormularioEditarUsuario(forms.ModelForm):
+    """
+    Formulario para editar usuarios existentes
+    """
+    class Meta:
+        model = Usuario
+        fields = ('email', 'first_name', 'last_name', 'is_active', 'is_staff')
+        widgets = {
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'usuario@ejemplo.com'
+            }),
+            'first_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombre del usuario'
+            }),
+            'last_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Apellido del usuario'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'is_staff': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+        }
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        # Verificar que el email no esté en uso por otro usuario
+        if Usuario.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError("Ya existe una cuenta con este correo electrónico.")
+        return email
+
+class FormularioCambiarContraseña(forms.Form):
+    """
+    Formulario para cambiar la contraseña de un usuario
+    """
+    password1 = forms.CharField(
+        label="Nueva contraseña",
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Mínimo 8 caracteres'
+        }),
+        help_text="La contraseña debe tener al menos 8 caracteres."
+    )
+    password2 = forms.CharField(
+        label="Confirmar nueva contraseña",
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Repite la contraseña'
+        })
+    )
+
+    def clean_password2(self):
+        password1 = self.cleaned_data.get("password1")
+        password2 = self.cleaned_data.get("password2")
+        if password1 and password2 and password1 != password2:
+            raise forms.ValidationError("Las contraseñas no coinciden.")
+        return password2

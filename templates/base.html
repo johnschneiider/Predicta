@@ -743,7 +743,7 @@
                 <div class="menu-section-title admin-title">
                     <i class="fas fa-crown"></i> Administración
                 </div>
-                <a href="{% url 'cuentas:panel_usuarios' %}" class="menu-item admin-item {% if 'cuentas' in request.resolver_match.namespace and request.resolver_match.url_name == 'panel_usuarios' %}active{% endif %}">
+                <a href="/panel_usuarios/" class="menu-item admin-item {% if 'cuentas' in request.resolver_match.namespace and request.resolver_match.url_name == 'panel_usuarios' %}active{% endif %}">
                     <i class="fas fa-users"></i> Usuarios
                 </a>
                 <a href="/admin/" class="menu-item admin-item" target="_blank">

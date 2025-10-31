@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Eliminar Usuario - {{ usuario.get_full_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/cuentas/admin.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="form-container">
+        <div class="delete-confirmation">
+            <h3>⚠️ Confirmar Eliminación</h3>
+            <p>¿Estás seguro de que deseas eliminar este usuario? Esta acción no se puede deshacer.</p>
+            
+            <div class="user-info-delete">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div class="user-avatar">
+                        {{ usuario.first_name|first|upper }}{{ usuario.last_name|first|upper }}
+                    </div>
+                    <div>
+                        <h4>{{ usuario.get_full_name }}</h4>
+                        <p>{{ usuario.email }}</p>
+                        <p>Registrado: {{ usuario.fecha_registro|date:"d/m/Y H:i" }}</p>
+                        {% if usuario.last_login %}
+                            <p>Último acceso: {{ usuario.last_login|date:"d/m/Y H:i" }}</p>
+                        {% else %}
+                            <p>Último acceso: Nunca</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="delete-actions">
+                    <button type="submit" class="btn-form btn-delete-confirm">
+                        🗑️ Sí, Eliminar Usuario
+                    </button>
+                    <a href="/panel_usuarios/" class="btn-form btn-delete-cancel">
+                        ❌ Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -7,53 +7,144 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="page-header">
-                <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
-                <p>Bienvenido, {{ usuario.get_full_name }}</p>
+            <div class="page-header mb-4">
+                <h1 class="text-primary"><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+                <p class="text-muted">Bienvenido, {{ usuario.get_full_name }}</p>
             </div>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-4">
-            <div class="card">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm border-0">
                 <div class="card-body text-center">
-                    <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
-                    <h5 class="card-title">Predicciones de IA</h5>
-                    <p class="card-text">Accede a las predicciones avanzadas de nuestro sistema de IA</p>
-                    <a href="{% url 'ai_predictions:dashboard' %}" class="btn btn-primary">Ver Predicciones</a>
+                    <div class="mb-3">
+                        <i class="fas fa-chart-line fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="card-title text-primary">Predicciones de IA</h5>
+                    <p class="card-text text-muted">Accede a las predicciones avanzadas de nuestro sistema de IA</p>
+                    <a href="{% url 'ai_predictions:dashboard' %}" class="btn btn-primary">
+                        <i class="fas fa-eye"></i> Ver Predicciones
+                    </a>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
-            <div class="card">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm border-0">
                 <div class="card-body text-center">
-                    <i class="fas fa-futbol fa-3x text-success mb-3"></i>
-                    <h5 class="card-title">Datos de Fútbol</h5>
-                    <p class="card-text">Explora estadísticas y datos históricos de fútbol</p>
-                    <a href="{% url 'football_data:dashboard' %}" class="btn btn-success">Ver Datos</a>
+                    <div class="mb-3">
+                        <i class="fas fa-futbol fa-3x text-success"></i>
+                    </div>
+                    <h5 class="card-title text-success">Datos de Fútbol</h5>
+                    <p class="card-text text-muted">Explora estadísticas y datos históricos de fútbol</p>
+                    <a href="{% url 'football_data:dashboard' %}" class="btn btn-success">
+                        <i class="fas fa-eye"></i> Ver Datos
+                    </a>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
-            <div class="card">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm border-0">
                 <div class="card-body text-center">
-                    <i class="fas fa-coins fa-3x text-warning mb-3"></i>
-                    <h5 class="card-title">Cuotas en Tiempo Real</h5>
-                    <p class="card-text">Consulta las cuotas más actualizadas del mercado</p>
-                    <a href="{% url 'odds:dashboard' %}" class="btn btn-warning">Ver Cuotas</a>
+                    <div class="mb-3">
+                        <i class="fas fa-coins fa-3x text-warning"></i>
+                    </div>
+                    <h5 class="card-title text-warning">Cuotas en Tiempo Real</h5>
+                    <p class="card-text text-muted">Consulta las cuotas más actualizadas del mercado</p>
+                    <a href="{% url 'odds:dashboard' %}" class="btn btn-warning">
+                        <i class="fas fa-eye"></i> Ver Cuotas
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
+    {% if usuario.is_superuser %}
     <div class="row mt-4">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5><i class="fas fa-info-circle"></i> Información de la Cuenta</h5>
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-crown"></i> Panel de Superadministrador</h4>
+                    <small class="opacity-75">Acceso completo al sistema de administración</small>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="fas fa-user-plus fa-2x text-primary"></i>
+                                    </div>
+                                    <h6 class="text-primary"><i class="fas fa-users"></i> Crear Usuarios</h6>
+                                    <p class="text-muted small">Crea nuevos usuarios del sistema con permisos específicos</p>
+                                    <a href="{% url 'cuentas:crear_usuario' %}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-plus"></i> Crear Usuario
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="fas fa-users-cog fa-2x text-primary"></i>
+                                    </div>
+                                    <h6 class="text-primary"><i class="fas fa-users"></i> Gestionar Usuarios</h6>
+                                    <p class="text-muted small">Edita, elimina y administra todos los usuarios</p>
+                                    <a href="/panel_usuarios/" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-cog"></i> Panel de Usuarios
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="fas fa-cogs fa-2x text-primary"></i>
+                                    </div>
+                                    <h6 class="text-primary"><i class="fas fa-database"></i> Django Admin</h6>
+                                    <p class="text-muted small">Acceso completo a la configuración del sistema</p>
+                                    <a href="/admin/" class="btn btn-outline-primary btn-sm" target="_blank">
+                                        <i class="fas fa-external-link-alt"></i> Abrir Admin
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Acciones rápidas adicionales -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="alert alert-info border-0">
+                                <h6><i class="fas fa-info-circle"></i> Acciones Rápidas</h6>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'cuentas:crear_usuario' %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-user-plus"></i> Nuevo Usuario
+                                    </a>
+                                    <a href="/panel_usuarios/" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-list"></i> Ver Todos los Usuarios
+                                    </a>
+                                    <a href="/admin/" class="btn btn-outline-primary btn-sm" target="_blank">
+                                        <i class="fas fa-database"></i> Configuración Avanzada
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0 text-primary"><i class="fas fa-info-circle"></i> Información de la Cuenta</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -67,9 +158,9 @@
                             <p><strong>Último acceso:</strong> {{ usuario.last_login|date:"d/m/Y H:i" }}</p>
                             <p><strong>Estado:</strong> 
                                 {% if usuario.is_active %}
-                                    <span class="badge badge-success">Activo</span>
+                                    <span class="badge bg-success">Activo</span>
                                 {% else %}
-                                    <span class="badge badge-danger">Inactivo</span>
+                                    <span class="badge bg-danger">Inactivo</span>
                                 {% endif %}
                             </p>
                         </div>

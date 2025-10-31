@@ -48,6 +48,12 @@
         font-weight: bold;
     }
     
+    .loading-text-progress {
+        font-size: 14px;
+        color: #666;
+        margin-top: 10px;
+    }
+    
     .prediction-badge {
         font-size: 13px;
         padding: 5px 10px;
@@ -67,7 +73,7 @@
     <div class="loading-spinner">
         <div class="spinner"></div>
         <div class="loading-text">Cargando predicciones...</div>
-        <div class="text-muted mt-2">Analizando datos de los próximos partidos</div>
+        <div class="loading-text-progress" id="loading-progress">Iniciando análisis...</div>
     </div>
 </div>
 
@@ -81,9 +87,9 @@
                 </div>
                 <div class="text-end">
                     <span class="badge bg-success">
-                        <i class="fas fa-sync-alt"></i> Actualizado: {{ updated_at|date:"H:i" }}
+                        <i class="fas fa-sync-alt"></i> Actualizado: <span id="updated-time">{{ updated_at|date:"H:i" }}</span>
                     </span>
-                    <p class="text-muted small mb-0 mt-2">Total partidos: <strong>{{ total_matches }}</strong></p>
+                    <p class="text-muted small mb-0 mt-2">Total partidos: <strong id="total-matches">0</strong> / <span id="total-available">-</span></p>
                 </div>
             </div>
         </div>
@@ -135,130 +141,8 @@
                                     <th class="text-center">Ambos Marcan</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {% for match in matches %}
-                                <tr>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ match.league }}</span>
-                                    </td>
-                                    <td><strong>{{ match.home_team }}</strong></td>
-                                    <td><strong>{{ match.away_team }}</strong></td>
-                                    <td>{{ match.date }}</td>
-                                    <td>
-                                        <i class="fas fa-clock text-primary"></i> {{ match.time }}
-                                    </td>
-                                    <!-- Remates Total -->
-                                    <td class="text-center">
-                                        {% if match.predictions.shots_total %}
-                                            <span class="badge bg-info prediction-badge">
-                                                {{ match.predictions.shots_total.prediction|floatformat:1 }}
-                                            </span>
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <!-- Remates Local -->
-                                    <td class="text-center">
-                                        {% if match.predictions.shots_home %}
-                                            <span class="badge bg-info prediction-badge">
-                                                {{ match.predictions.shots_home.prediction|floatformat:1 }}
-                                            </span>
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <!-- Remates Visitante -->
-                                    <td class="text-center">
-                                        {% if match.predictions.shots_away %}
-                                            <span class="badge bg-info prediction-badge">
-                                                {{ match.predictions.shots_away.prediction|floatformat:1 }}
-                                            </span>
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <!-- Remates a Puerta -->
-                                    <td class="text-center">
-                                        {% if match.predictions.shots_on_target_total %}
-                                            <span class="badge bg-info prediction-badge">
-                                                {{ match.predictions.shots_on_target_total.prediction|floatformat:1 }}
-                                            </span>
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <!-- Goles Total -->
-                                    <td class="text-center">
-                                        {% if match.predictions.goals_total %}
-                                            <span class="badge bg-success prediction-badge">
-                                                {{ match.predictions.goals_total.prediction|floatformat:1 }}
-                                            </span>
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <!-- Goles Local -->
-                                    <td class="text-center">
-                                        {% if match.predictions.goals_home %}
-                                            <span class="badge bg-success prediction-badge">
-                                                {{ match.predictions.goals_home.prediction|floatformat:1 }}
-                                            </span>
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <!-- Goles Visitante -->
-                                    <td class="text-center">
-                                        {% if match.predictions.goals_away %}
-                                            <span class="badge bg-success prediction-badge">
-                                                {{ match.predictions.goals_away.prediction|floatformat:1 }}
-                                            </span>
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <!-- Corners Total -->
-                                    <td class="text-center">
-                                        {% if match.predictions.corners_total %}
-                                            <span class="badge bg-warning prediction-badge">
-                                                {{ match.predictions.corners_total.prediction|floatformat:1 }}
-                                            </span>
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <!-- Corners Local -->
-                                    <td class="text-center">
-                                        {% if match.predictions.corners_home %}
-                                            <span class="badge bg-warning prediction-badge">
-                                                {{ match.predictions.corners_home.prediction|floatformat:1 }}
-                                            </span>
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <!-- Corners Visitante -->
-                                    <td class="text-center">
-                                        {% if match.predictions.corners_away %}
-                                            <span class="badge bg-warning prediction-badge">
-                                                {{ match.predictions.corners_away.prediction|floatformat:1 }}
-                                            </span>
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <!-- Ambos Marcan -->
-                                    <td class="text-center">
-                                        {% if match.prediction >= 60 %}
-                                            <span class="badge bg-success fs-6">{{ match.prediction|floatformat:1 }}%</span>
-                                        {% elif match.prediction >= 40 %}
-                                            <span class="badge bg-warning fs-6">{{ match.prediction|floatformat:1 }}%</span>
-                                        {% else %}
-                                            <span class="badge bg-danger fs-6">{{ match.prediction|floatformat:1 }}%</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
+                            <tbody id="matches-tbody">
+                                <!-- Las filas se cargarán dinámicamente vía AJAX -->
                             </tbody>
                         </table>
                     </div>
@@ -311,19 +195,167 @@
 </div>
 
 <script>
-// Mostrar loading overlay al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
     const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingProgress = document.getElementById('loading-progress');
+    const matchesTbody = document.getElementById('matches-tbody');
+    const totalMatchesEl = document.getElementById('total-matches');
+    const totalAvailableEl = document.getElementById('total-available');
+    const updatedTimeEl = document.getElementById('updated-time');
     
-    // Mostrar el loading
+    let currentOffset = 0;
+    let totalAvailable = 0;
+    let allProcessedMatches = [];
+    
+    // Función para agregar una fila a la tabla
+    function addMatchRow(match) {
+        const row = document.createElement('tr');
+        
+        // Función helper para formatear predicción
+        function formatPrediction(pred) {
+            if (!pred || pred === null || pred === undefined) return '<span class="text-muted">-</span>';
+            const value = typeof pred === 'object' && pred.prediction !== undefined ? pred.prediction : pred;
+            return `<span class="badge bg-info prediction-badge">${parseFloat(value).toFixed(1)}</span>`;
+        }
+        
+        // Función helper para badges de goles
+        function formatGoalPrediction(pred) {
+            if (!pred || pred === null || pred === undefined) return '<span class="text-muted">-</span>';
+            const value = typeof pred === 'object' && pred.prediction !== undefined ? pred.prediction : pred;
+            return `<span class="badge bg-success prediction-badge">${parseFloat(value).toFixed(1)}</span>`;
+        }
+        
+        // Función helper para badges de corners
+        function formatCornerPrediction(pred) {
+            if (!pred || pred === null || pred === undefined) return '<span class="text-muted">-</span>';
+            const value = typeof pred === 'object' && pred.prediction !== undefined ? pred.prediction : pred;
+            return `<span class="badge bg-warning prediction-badge">${parseFloat(value).toFixed(1)}</span>`;
+        }
+        
+        // Función helper para ambos marcan
+        function formatBothTeamsScore(pct) {
+            if (pct === null || pct === undefined) return '<span class="text-muted">-</span>';
+            const value = parseFloat(pct);
+            let badgeClass = 'bg-danger';
+            if (value >= 60) badgeClass = 'bg-success';
+            else if (value >= 40) badgeClass = 'bg-warning';
+            return `<span class="badge ${badgeClass} fs-6">${value.toFixed(1)}%</span>`;
+        }
+        
+        const predictions = match.predictions || {};
+        
+        row.innerHTML = `
+            <td><span class="badge bg-secondary">${match.league || '-'}</span></td>
+            <td><strong>${match.home_team || '-'}</strong></td>
+            <td><strong>${match.away_team || '-'}</strong></td>
+            <td>${match.date || '-'}</td>
+            <td><i class="fas fa-clock text-primary"></i> ${match.time || '-'}</td>
+            <td class="text-center">${formatPrediction(predictions.shots_total)}</td>
+            <td class="text-center">${formatPrediction(predictions.shots_home)}</td>
+            <td class="text-center">${formatPrediction(predictions.shots_away)}</td>
+            <td class="text-center">${formatPrediction(predictions.shots_on_target_total)}</td>
+            <td class="text-center">${formatGoalPrediction(predictions.goals_total)}</td>
+            <td class="text-center">${formatGoalPrediction(predictions.goals_home)}</td>
+            <td class="text-center">${formatGoalPrediction(predictions.goals_away)}</td>
+            <td class="text-center">${formatCornerPrediction(predictions.corners_total)}</td>
+            <td class="text-center">${formatCornerPrediction(predictions.corners_home)}</td>
+            <td class="text-center">${formatCornerPrediction(predictions.corners_away)}</td>
+            <td class="text-center">${formatBothTeamsScore(match.prediction)}</td>
+        `;
+        
+        matchesTbody.appendChild(row);
+    }
+    
+    // Función para cargar el siguiente lote
+    function loadNextBatch() {
+        const progressText = totalAvailable > 0 
+            ? `Procesando partidos... (${Math.min(currentOffset + 1, totalAvailable)}-${Math.min(currentOffset + 3, totalAvailable)} de ${totalAvailable})`
+            : `Procesando partidos...`;
+        loadingProgress.textContent = progressText;
+        
+        fetch(`{% url 'football_data:analysis_ajax' %}?offset=${currentOffset}&batch_size=3`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Actualizar total disponible si es la primera vez
+                    if (totalAvailable === 0 && data.total > 0) {
+                        totalAvailable = data.total;
+                        totalAvailableEl.textContent = data.total;
+                    }
+                    
+                    // Agregar partidos procesados
+                    if (data.matches && data.matches.length > 0) {
+                        data.matches.forEach(match => {
+                            allProcessedMatches.push(match);
+                            addMatchRow(match);
+                        });
+                        
+                        // Ordenar por fecha y hora
+                        allProcessedMatches.sort((a, b) => {
+                            const dateA = a.date + ' ' + a.time;
+                            const dateB = b.date + ' ' + b.time;
+                            return dateA.localeCompare(dateB);
+                        });
+                        
+                        // Re-renderizar tabla ordenada
+                        matchesTbody.innerHTML = '';
+                        allProcessedMatches.forEach(match => addMatchRow(match));
+                    }
+                    
+                    // Actualizar contadores
+                    totalMatchesEl.textContent = allProcessedMatches.length;
+                    currentOffset = data.offset + data.processed_count;
+                    
+                    // Continuar si hay más partidos
+                    if (data.has_more && data.total > 0) {
+                        setTimeout(loadNextBatch, 500); // Esperar 500ms antes del siguiente lote
+                    } else {
+                        // Terminó la carga
+                        if (allProcessedMatches.length === 0) {
+                            loadingProgress.textContent = '⚠️ No se encontraron partidos disponibles';
+                            setTimeout(() => {
+                                loadingOverlay.style.display = 'none';
+                                // Mostrar mensaje en la tabla
+                                matchesTbody.innerHTML = `
+                                    <tr>
+                                        <td colspan="16" class="text-center py-5">
+                                            <div class="alert alert-warning mb-0">
+                                                <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                                                <h5>No hay partidos disponibles</h5>
+                                                <p class="mb-0">No se encontraron partidos programados para las próximas 24 horas.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            }, 1500);
+                        } else {
+                            loadingProgress.textContent = `✅ Completado: ${allProcessedMatches.length} partidos procesados`;
+                            setTimeout(() => {
+                                loadingOverlay.style.display = 'none';
+                                updatedTimeEl.textContent = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                            }, 1000);
+                        }
+                    }
+                } else {
+                    // Error
+                    loadingProgress.textContent = '❌ Error al cargar partidos';
+                    setTimeout(() => {
+                        loadingOverlay.style.display = 'none';
+                    }, 2000);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                loadingProgress.textContent = '❌ Error de conexión';
+                setTimeout(() => {
+                    loadingOverlay.style.display = 'none';
+                }, 2000);
+            });
+    }
+    
+    // Iniciar carga
     loadingOverlay.style.display = 'flex';
-    
-    // Ocultar el loading una vez que la página esté completamente cargada
-    window.addEventListener('load', function() {
-        setTimeout(function() {
-            loadingOverlay.style.display = 'none';
-        }, 500); // Pequeño delay para que se vea la animación
-    });
+    loadNextBatch();
 });
 </script>
 {% endblock %}

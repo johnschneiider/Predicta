@@ -266,6 +266,39 @@ document.addEventListener('DOMContentLoaded', function() {
         matchesTbody.appendChild(row);
     }
     
+    // Helper: fetch con timeout y reintentos, enviando cookies de sesión
+    function fetchWithRetry(url, options = {}, retries = 2, timeoutMs = 20000) {
+        return new Promise((resolve, reject) => {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            fetch(url, {
+                ...options,
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json', ...(options.headers || {}) },
+                signal: controller.signal,
+            })
+            .then(resp => {
+                clearTimeout(timer);
+                // Si está redirigiendo (por login), forzar error para reintentar/avisar
+                if (!resp.ok || resp.redirected) {
+                    throw new Error(`HTTP ${resp.status}${resp.redirected ? ' (redirect)' : ''}`);
+                }
+                return resp.json();
+            })
+            .then(resolve)
+            .catch(err => {
+                clearTimeout(timer);
+                if (retries > 0) {
+                    setTimeout(() => {
+                        fetchWithRetry(url, options, retries - 1, timeoutMs).then(resolve).catch(reject);
+                    }, 800);
+                } else {
+                    reject(err);
+                }
+            });
+        });
+    }
+
     // Función para cargar el siguiente lote
     function loadNextBatch() {
         const progressText = totalAvailable > 0 
@@ -273,8 +306,8 @@ document.addEventListener('DOMContentLoaded', function() {
             : `Procesando partidos...`;
         loadingProgress.textContent = progressText;
         
-        fetch(`{% url 'football_data:analysis_ajax' %}?offset=${currentOffset}&batch_size=3`)
-            .then(response => response.json())
+        const cacheBust = `&_=${Date.now()}`;
+        fetchWithRetry(`{% url 'football_data:analysis_ajax' %}?offset=${currentOffset}&batch_size=3${cacheBust}`)
             .then(data => {
                 if (data.success) {
                     // Actualizar total disponible si es la primera vez

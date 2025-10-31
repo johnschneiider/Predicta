@@ -22,13 +22,12 @@ from django.shortcuts import redirect
 from django.views.generic import RedirectView
 from django.contrib.auth.decorators import login_required
 from . import views
-from cuentas.views import VistaPanelUsuarios
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('cuentas/', include(('cuentas.urls', 'cuentas'), namespace='cuentas')),
-    # Compatibilidad: nombre global 'panel_usuarios' apuntando directamente a la vista
-    path('cuentas/admin/usuarios/compat/', VistaPanelUsuarios.as_view(), name='panel_usuarios'),
+    # Compatibilidad: nombre global 'panel_usuarios' redirige al namespaced correcto
+    path('cuentas/admin/usuarios/compat/', RedirectView.as_view(pattern_name='cuentas:panel_usuarios', permanent=True), name='panel_usuarios'),
     path('', views.landing_page, name='home'),
     path('odds/', include(('odds.urls', 'odds'), namespace='odds')),
     path('football_data/', include(('football_data.urls', 'football_data'), namespace='football_data')),

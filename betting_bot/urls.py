@@ -34,11 +34,7 @@ urlpatterns = [
     path('ai/', include(('ai_predictions.urls', 'ai_predictions'), namespace='ai_predictions')),
 ]
 
-# Incluir rutas de basketball solo si la app está activa en INSTALLED_APPS
-if 'basketball_data' in settings.INSTALLED_APPS:
-    urlpatterns += [
-        path('basketball/', include(('basketball_data.urls', 'basketball_data'), namespace='basketball_data')),
-    ]
+# Eliminado: rutas de basketball_data
 
 # Servir archivos de media en desarrollo
 if settings.DEBUG:

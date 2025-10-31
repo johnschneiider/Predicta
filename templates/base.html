@@ -722,9 +722,7 @@
                 <a href="{% url 'football_data:analysis' %}" class="menu-item {% if 'football_data' in request.resolver_match.namespace and request.resolver_match.url_name == 'analysis' %}active{% endif %}">
                     <i class="fas fa-microscope"></i> Análisis 24h (Fútbol)
                 </a>
-                <a href="{% url 'basketball_data:prediction_form' %}" class="menu-item {% if 'basketball_data' in request.resolver_match.namespace and request.resolver_match.url_name == 'prediction_form' %}active{% endif %}">
-                    <i class="fas fa-basketball-ball"></i> Predicción NBA
-                </a>
+                
             </div>
 
             <!-- Datos -->
@@ -733,9 +731,7 @@
                 <a href="{% url 'football_data:import' %}" class="menu-item">
                     <i class="fas fa-upload"></i> Importar Fútbol
                 </a>
-                <a href="{% url 'basketball_data:dashboard' %}" class="menu-item {% if 'basketball_data' in request.resolver_match.namespace and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                    <i class="fas fa-basketball-ball"></i> Dashboard NBA
-                </a>
+                
                 <a href="{% url 'odds:dashboard' %}" class="menu-item">
                     <i class="fas fa-chart-area"></i> Cuotas
                 </a>

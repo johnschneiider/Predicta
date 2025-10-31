@@ -4,6 +4,7 @@ Vistas para mostrar datos históricos de fútbol
 
 import os
 from datetime import datetime, timedelta, timezone as tz
+import logging
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.core.paginator import Paginator
@@ -16,6 +17,7 @@ from django.views import View
 from django.contrib import messages
 from django.conf import settings
 from django.utils import timezone
+logger = logging.getLogger('football_data')
 
 from .models import League, Match, ExcelFile
 from .services import ExcelImportService

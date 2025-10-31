@@ -25,12 +25,12 @@ from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('cuentas/', include('cuentas.urls')),
+    path('cuentas/', include(('cuentas.urls', 'cuentas'), namespace='cuentas')),
     path('', views.landing_page, name='home'),
-    path('odds/', include('odds.urls')),
-    path('football_data/', include('football_data.urls')),
-    path('basketball/', include('basketball_data.urls')),
-    path('ai/', include('ai_predictions.urls')),
+    path('odds/', include(('odds.urls', 'odds'), namespace='odds')),
+    path('football_data/', include(('football_data.urls', 'football_data'), namespace='football_data')),
+    path('basketball/', include(('basketball_data.urls', 'basketball_data'), namespace='basketball_data')),
+    path('ai/', include(('ai_predictions.urls', 'ai_predictions'), namespace='ai_predictions')),
 ]
 
 # Servir archivos de media en desarrollo

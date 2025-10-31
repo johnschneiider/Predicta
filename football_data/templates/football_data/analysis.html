@@ -110,8 +110,7 @@
         </div>
     </div>
 
-    <!-- Tabla de Partidos -->
-    {% if matches %}
+    <!-- Tabla de Partidos (siempre visible; se llena dinámicamente) -->
     <div class="row">
         <div class="col-12">
             <div class="card shadow">
@@ -150,17 +149,6 @@
             </div>
         </div>
     </div>
-    {% else %}
-    <div class="row">
-        <div class="col-12">
-            <div class="alert alert-warning text-center">
-                <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
-                <h5>No hay partidos disponibles</h5>
-                <p class="mb-0">No se encontraron partidos programados para las próximas 24 horas.</p>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 
     <!-- Información Adicional -->
     <div class="row mt-4">
@@ -307,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadingProgress.textContent = progressText;
         
         const cacheBust = `&_=${Date.now()}`;
-        fetchWithRetry(`{% url 'football_data:analysis_ajax' %}?offset=${currentOffset}&batch_size=3${cacheBust}`)
+        fetchWithRetry('/football_data/analysis/ajax/?offset=' + currentOffset + '&batch_size=3' + cacheBust)
             .then(data => {
                 if (data.success) {
                     // Actualizar total disponible si es la primera vez

@@ -56,7 +56,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'betting_bot.middleware.AuthenticationMiddleware',
 ]
 
 ROOT_URLCONF = 'betting_bot.urls'

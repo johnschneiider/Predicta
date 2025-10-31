@@ -21,6 +21,7 @@ from django.conf.urls.static import static
 from django.shortcuts import redirect
 from django.views.generic import RedirectView
 from django.contrib.auth.decorators import login_required
+import importlib.util
 from . import views
 
 urlpatterns = [
@@ -31,9 +32,14 @@ urlpatterns = [
     path('', views.landing_page, name='home'),
     path('odds/', include(('odds.urls', 'odds'), namespace='odds')),
     path('football_data/', include(('football_data.urls', 'football_data'), namespace='football_data')),
-    path('basketball/', include(('basketball_data.urls', 'basketball_data'), namespace='basketball_data')),
     path('ai/', include(('ai_predictions.urls', 'ai_predictions'), namespace='ai_predictions')),
 ]
+
+# Incluir rutas de basketball solo si el módulo existe en el entorno
+if importlib.util.find_spec('basketball_data'):
+    urlpatterns += [
+        path('basketball/', include(('basketball_data.urls', 'basketball_data'), namespace='basketball_data')),
+    ]
 
 # Servir archivos de media en desarrollo
 if settings.DEBUG:

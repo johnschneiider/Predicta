@@ -22,9 +22,9 @@ class Command(BaseCommand):
         self.stdout.write('-' * 80)
         
         for usuario in usuarios:
-            superuser = '✓' if usuario.is_superuser else '✗'
-            staff = '✓' if usuario.is_staff else '✗'
-            active = '✓' if usuario.is_active else '✗'
+            superuser = 'SI' if usuario.is_superuser else 'NO'
+            staff = 'SI' if usuario.is_staff else 'NO'
+            active = 'SI' if usuario.is_active else 'NO'
             
             self.stdout.write(
                 f'{usuario.username:<20} {usuario.email:<30} {superuser:<10} {staff:<10} {active:<10}'

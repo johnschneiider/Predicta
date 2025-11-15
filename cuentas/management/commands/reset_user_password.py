@@ -39,7 +39,7 @@ class Command(BaseCommand):
             if len(password) < 8:
                 self.stdout.write(
                     self.style.WARNING(
-                        '⚠ Advertencia: La contraseña tiene menos de 8 caracteres.'
+                        '[ADVERTENCIA] La contraseña tiene menos de 8 caracteres.'
                     )
                 )
                 confirm = input('¿Continuar de todas formas? (s/N): ')
@@ -52,7 +52,7 @@ class Command(BaseCommand):
         
         self.stdout.write(
             self.style.SUCCESS(
-                f'✓ Contraseña actualizada para el usuario "{username}" ({usuario.email}).'
+                f'[OK] Contraseña actualizada para el usuario "{username}" ({usuario.email}).'
             )
         )
 

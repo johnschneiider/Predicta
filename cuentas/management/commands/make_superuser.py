@@ -27,7 +27,7 @@ class Command(BaseCommand):
         
         self.stdout.write(
             self.style.SUCCESS(
-                f'✓ Usuario "{username}" ({usuario.email}) ahora es superusuario y staff.'
+                f'[OK] Usuario "{username}" ({usuario.email}) ahora es superusuario y staff.'
             )
         )
 

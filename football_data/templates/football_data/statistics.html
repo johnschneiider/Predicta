@@ -6,7 +6,7 @@
 {% block extra_css %}
 <style>
     .stats-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: var(--azul-oscuro);
         color: white;
         border: none;
         border-radius: 15px;
@@ -33,19 +33,20 @@
     }
     
     .chart-container {
-        background: white;
+        background: rgba(255, 255, 255, 0.9);
         border-radius: 15px;
         padding: 2rem;
         margin-bottom: 2rem;
         box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        backdrop-filter: blur(10px);
     }
     
     .section-title {
-        color: #333;
         font-weight: bold;
         margin-bottom: 1.5rem;
         padding-bottom: 0.5rem;
         border-bottom: 3px solid #007bff;
+        /* El color se aplica automáticamente por las reglas de contraste */
     }
 </style>
 {% endblock %}
@@ -63,7 +64,7 @@
     <!-- Estadísticas Principales -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card stats-card">
+            <div class="card stats-card dark-bg">
                 <div class="card-body text-center">
                     <i class="fas fa-futbol fa-3x mb-3"></i>
                     <h3>{{ stats.total_matches }}</h3>
@@ -72,7 +73,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card stats-card">
+            <div class="card stats-card dark-bg">
                 <div class="card-body text-center">
                     <i class="fas fa-trophy fa-3x mb-3"></i>
                     <h3>{{ stats.total_leagues }}</h3>
@@ -81,7 +82,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card stats-card">
+            <div class="card stats-card dark-bg">
                 <div class="card-body text-center">
                     <i class="fas fa-file-excel fa-3x mb-3"></i>
                     <h3>{{ stats.total_files }}</h3>
@@ -90,7 +91,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card stats-card">
+            <div class="card stats-card dark-bg">
                 <div class="card-body text-center">
                     <i class="fas fa-calendar fa-3x mb-3"></i>
                     <h3>{{ stats.date_range }}</h3>
@@ -103,7 +104,7 @@
     <!-- Estadísticas por Liga -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="chart-container">
+            <div class="chart-container light-bg">
                 <h3 class="section-title">
                     <i class="fas fa-trophy"></i> Estadísticas por Liga
                 </h3>

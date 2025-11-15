@@ -2,150 +2,19 @@
 
 {% block title %}Nueva Predicción - IA{% endblock %}
 
-{% block extra_css %}
-<style>
-    .prediction-form {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 20px;
-        padding: 30px;
-        color: white;
-        margin-bottom: 30px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-    }
-    
-    .form-control, .form-select {
-        border-radius: 10px;
-        border: none;
-        padding: 12px 15px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    
-    .btn-predict {
-        background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-        border: none;
-        border-radius: 50px;
-        padding: 15px 40px;
-        font-size: 18px;
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
-        transition: all 0.3s ease;
-    }
-    
-    .btn-predict:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 35px rgba(255, 107, 107, 0.4);
-    }
-    
-    .prediction-type-card {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 20px;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    .team-selector {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 20px;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    .loading-spinner {
-        display: none;
-    }
-    
-    .progress-container {
-        display: none;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 15px;
-        padding: 30px;
-        margin-top: 20px;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    .progress {
-        height: 30px;
-        border-radius: 15px;
-        background-color: rgba(255, 255, 255, 0.2);
-        overflow: hidden;
-    }
-    
-    .progress-bar {
-        background: linear-gradient(90deg, #28a745, #20c997);
-        height: 100%;
-        transition: width 0.3s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .progress-bar::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        bottom: 0;
-        right: 0;
-        background-image: linear-gradient(
-            -45deg,
-            rgba(255, 255, 255, 0.2) 25%,
-            transparent 25%,
-            transparent 50%,
-            rgba(255, 255, 255, 0.2) 50%,
-            rgba(255, 255, 255, 0.2) 75%,
-            transparent 75%,
-            transparent
-        );
-        background-size: 50px 50px;
-        animation: progress-animation 2s linear infinite;
-    }
-    
-    @keyframes progress-animation {
-        0% {
-            background-position: 0 0;
-        }
-        100% {
-            background-position: 50px 50px;
-        }
-    }
-    
-    .progress-text {
-        color: white;
-        margin-top: 15px;
-        text-align: center;
-    }
-    
-    .progress-details {
-        color: rgba(255, 255, 255, 0.8);
-        font-size: 0.9rem;
-        margin-top: 10px;
-        text-align: center;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="container-fluid">
     <!-- Header -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="prediction-form">
-                <div class="text-center">
-                    <h1 class="mb-3">
-                        <i class="fas fa-magic"></i> Predicción Inteligente
-                    </h1>
-                    <p class="mb-0">Selecciona los equipos y obtén predicciones precisas usando IA</p>
+            <div class="card bg-primary text-white border-0 shadow-lg">
+                <div class="card-body">
+                    <div class="text-center">
+                        <h1 class="mb-3">
+                            <i class="fas fa-magic"></i> Predicción Inteligente
+                        </h1>
+                        <p class="mb-0 opacity-75">Selecciona los equipos y obtén predicciones precisas usando IA</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -158,70 +27,85 @@
                 {% csrf_token %}
                 
                 <!-- Liga -->
-                <div class="team-selector">
-                    <h4 class="text-white mb-3">
-                        <i class="fas fa-trophy"></i> Liga
-                    </h4>
-                    {{ form.league }}
-                    <small class="text-white-50 mt-2 d-block">
-                        Selecciona la liga de los equipos
-                    </small>
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-light">
+                        <h4 class="mb-0 text-primary">
+                            <i class="fas fa-trophy"></i> Liga
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        {{ form.league }}
+                        <small class="text-muted mt-2 d-block">
+                            Selecciona la liga de los equipos
+                        </small>
+                    </div>
                 </div>
 
                 <!-- Equipos -->
-                <div class="row">
+                <div class="row mb-4">
                     <div class="col-md-6">
-                        <div class="team-selector">
-                            <h4 class="text-white mb-3">
-                                <i class="fas fa-home"></i> Equipo Local
-                            </h4>
-                            {{ form.home_team }}
-                            <small class="text-white-50 mt-2 d-block">
-                                Equipo que juega en casa
-                            </small>
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-light">
+                                <h4 class="mb-0 text-primary">
+                                    <i class="fas fa-home"></i> Equipo Local
+                                </h4>
+                            </div>
+                            <div class="card-body">
+                                {{ form.home_team }}
+                                <small class="text-muted mt-2 d-block">
+                                    Equipo que juega en casa
+                                </small>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="team-selector">
-                            <h4 class="text-white mb-3">
-                                <i class="fas fa-plane"></i> Equipo Visitante
-                            </h4>
-                            {{ form.away_team }}
-                            <small class="text-white-50 mt-2 d-block">
-                                Equipo que juega fuera
-                            </small>
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-light">
+                                <h4 class="mb-0 text-primary">
+                                    <i class="fas fa-plane"></i> Equipo Visitante
+                                </h4>
+                            </div>
+                            <div class="card-body">
+                                {{ form.away_team }}
+                                <small class="text-muted mt-2 d-block">
+                                    Equipo que juega fuera
+                                </small>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Botón de Predicción -->
                 <div class="text-center mt-4">
-                    <button type="submit" class="btn btn-predict text-white" id="predictBtn">
+                    <button type="submit" class="btn btn-primary btn-lg px-5 py-3" id="predictBtn" style="background-color: #00ABE4 !important; border-color: #00ABE4 !important; color: white !important;" onmouseover="this.style.backgroundColor='#0099CC' !important" onmouseout="this.style.backgroundColor='#00ABE4' !important">
                         <i class="fas fa-brain"></i> Predecir
                     </button>
                     
-                    <div class="loading-spinner mt-3" id="loadingSpinner">
-                        <div class="spinner-border text-white" role="status">
+                    <div class="d-none mt-3" id="loadingSpinner">
+                        <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Cargando...</span>
                         </div>
-                        <p class="text-white mt-2">Iniciando análisis...</p>
+                        <p class="text-primary mt-2">Iniciando análisis...</p>
                     </div>
                     
                     <!-- Barra de Progreso -->
-                    <div class="progress-container" id="progressContainer">
-                        <h5 class="text-white text-center mb-3">
-                            <i class="fas fa-brain"></i> Generando Predicciones
-                        </h5>
-                        <div class="progress">
-                            <div class="progress-bar" id="progressBar" role="progressbar" style="width: 0%">
-                                <span style="position: relative; z-index: 1;">0%</span>
+                    <div class="card border-0 shadow-sm mt-4 d-none" id="progressContainer">
+                        <div class="card-body text-center">
+                            <h5 class="text-primary mb-3">
+                                <i class="fas fa-brain"></i> Generando Predicciones
+                            </h5>
+                            <div class="progress mb-3" style="height: 25px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
+                                     id="progressBar" role="progressbar" style="width: 0%">
+                                    <span style="position: relative; z-index: 1;">0%</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="progress-text" id="progressText">
-                            Iniciando...
-                        </div>
-                        <div class="progress-details" id="progressDetails">
-                            0 de 10 tipos de predicción completados
+                            <div class="text-primary fw-bold" id="progressText">
+                                Iniciando...
+                            </div>
+                            <div class="text-muted small" id="progressDetails">
+                                0 de 10 tipos de predicción completados
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -246,33 +130,48 @@
     <!-- Información sobre el sistema -->
     <div class="row mt-5">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5><i class="fas fa-info-circle"></i> Cómo Funciona la Predicción</h5>
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0 text-primary"><i class="fas fa-info-circle"></i> Cómo Funciona la Predicción</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-4">
-                            <h6><i class="fas fa-chart-line text-primary"></i> Análisis Histórico</h6>
-                            <p class="text-muted">Analiza los últimos partidos de cada equipo para identificar patrones de rendimiento.</p>
+                        <div class="col-md-4 mb-3">
+                            <div class="text-center">
+                                <i class="fas fa-chart-line fa-2x text-primary mb-2"></i>
+                                <h6 class="text-primary">Análisis Histórico</h6>
+                                <p class="text-muted small">Analiza los últimos partidos de cada equipo para identificar patrones de rendimiento.</p>
+                            </div>
                         </div>
-                        <div class="col-md-4">
-                            <h6><i class="fas fa-fist-raised text-success"></i> Forma Reciente</h6>
-                            <p class="text-muted">Evalúa la forma actual de cada equipo basándose en victorias, empates y derrotas recientes.</p>
+                        <div class="col-md-4 mb-3">
+                            <div class="text-center">
+                                <i class="fas fa-fist-raised fa-2x text-success mb-2"></i>
+                                <h6 class="text-success">Forma Reciente</h6>
+                                <p class="text-muted small">Evalúa la forma actual de cada equipo basándose en victorias, empates y derrotas recientes.</p>
+                            </div>
                         </div>
-                        <div class="col-md-4">
-                            <h6><i class="fas fa-handshake text-info"></i> Enfrentamientos Directos</h6>
-                            <p class="text-muted">Considera el historial de enfrentamientos entre los dos equipos específicos.</p>
+                        <div class="col-md-4 mb-3">
+                            <div class="text-center">
+                                <i class="fas fa-handshake fa-2x text-info mb-2"></i>
+                                <h6 class="text-info">Enfrentamientos Directos</h6>
+                                <p class="text-muted small">Considera el historial de enfrentamientos entre los dos equipos específicos.</p>
+                            </div>
                         </div>
                     </div>
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <h6><i class="fas fa-home text-warning"></i> Ventaja de Local</h6>
-                            <p class="text-muted">Incluye el factor de jugar en casa, que tradicionalmente da ventaja al equipo local.</p>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="text-center">
+                                <i class="fas fa-home fa-2x text-warning mb-2"></i>
+                                <h6 class="text-warning">Ventaja de Local</h6>
+                                <p class="text-muted small">Incluye el factor de jugar en casa, que tradicionalmente da ventaja al equipo local.</p>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <h6><i class="fas fa-calculator text-danger"></i> Algoritmo Avanzado</h6>
-                            <p class="text-muted">Utiliza regresión lineal y machine learning para generar predicciones precisas.</p>
+                        <div class="col-md-6 mb-3">
+                            <div class="text-center">
+                                <i class="fas fa-calculator fa-2x text-danger mb-2"></i>
+                                <h6 class="text-danger">Algoritmo Avanzado</h6>
+                                <p class="text-muted small">Utiliza regresión lineal y machine learning para generar predicciones precisas.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -334,9 +233,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Mostrar barra de progreso inmediatamente
             if (submitBtn) submitBtn.style.display = 'none';
-            if (loadingSpinner) loadingSpinner.style.display = 'none';
+            if (loadingSpinner) loadingSpinner.classList.remove('d-none');
             if (progressContainer) {
-                progressContainer.style.display = 'block';
+                progressContainer.classList.remove('d-none');
                 console.log('Barra de progreso mostrada');
             }
             
@@ -359,7 +258,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error:', error);
                 alert('Error procesando predicción');
                 if (submitBtn) submitBtn.style.display = 'block';
-                if (progressContainer) progressContainer.style.display = 'none';
+                if (progressContainer) progressContainer.classList.add('d-none');
                 isProcessing = false;
             });
             

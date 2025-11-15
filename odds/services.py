@@ -354,17 +354,21 @@ class OddsAPIService:
             logger.error(f"Error sincronizando cuotas: {e}")
             return 0
     
-    def get_upcoming_matches(self, sport_key: str = None) -> List[Dict]:
+    def get_upcoming_matches(self, sport_key: str = None, include_multiple_sports: bool = False) -> List[Dict]:
         """
-        Obtiene los próximos partidos programados para un deporte específico
+        Obtiene los próximos partidos programados para un deporte específico o múltiples deportes
         
         Args:
             sport_key: Clave del deporte (ej: 'soccer_epl')
+            include_multiple_sports: Si True, incluye múltiples deportes de fútbol
             
         Returns:
             List[Dict]: Lista de próximos partidos
         """
         try:
+            if include_multiple_sports:
+                return self._get_multiple_sports_matches()
+            
             sport_key = sport_key or settings.SPORT_KEY
             
             url = f"{self.base_url}/sports/{sport_key}/events"
@@ -384,6 +388,73 @@ class OddsAPIService:
             
         except Exception as e:
             logger.error(f"Error obteniendo próximos partidos: {e}")
+            return []
+    
+    def _get_multiple_sports_matches(self) -> List[Dict]:
+        """
+        Obtiene partidos de múltiples deportes de fútbol para tener más opciones
+        
+        Returns:
+            List[Dict]: Lista combinada de próximos partidos
+        """
+        try:
+            # Lista de deportes de fútbol principales
+            football_sports = [
+                'soccer_epl',
+                'soccer_spain_la_liga',
+                'soccer_germany_bundesliga',
+                'soccer_italy_serie_a',
+                'soccer_france_ligue_one',
+                'soccer_uefa_champs_league',
+                'soccer_argentina_primera_division',
+                'soccer_belgium_first_div',
+                'soccer_china_superleague',
+                'soccer_japan_j_league',
+                'soccer_australia_aleague',
+                'soccer_netherlands_eredivisie',
+                'soccer_portugal_primeira_liga',
+                'soccer_spain_segunda_division',
+                'soccer_turkey_super_league',
+                'soccer_italy_serie_b',
+                'soccer_france_ligue_two'
+            ]
+            
+            all_matches = []
+            successful_sports = []
+            
+            logger.info("Consultando múltiples deportes de fútbol...")
+            
+            for sport in football_sports:
+                try:
+                    url = f"{self.base_url}/sports/{sport}/events"
+                    params = {
+                        'api_key': self.api_key,
+                        'dateFormat': 'iso'
+                    }
+                    
+                    response = self.session.get(url, params=params, timeout=10)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        if data:
+                            all_matches.extend(data)
+                            successful_sports.append(sport)
+                            logger.info(f"✓ {sport}: {len(data)} partidos")
+                    else:
+                        logger.warning(f"✗ {sport}: Error {response.status_code}")
+                        
+                except Exception as e:
+                    logger.warning(f"✗ {sport}: Excepción {e}")
+            
+            # Ordenar por fecha
+            all_matches.sort(key=lambda x: x.get('commence_time', ''))
+            
+            logger.info(f"Total obtenido: {len(all_matches)} partidos de {len(successful_sports)} deportes")
+            
+            return all_matches
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo múltiples deportes: {e}")
             return []
     
     def get_latest_average_odds(self, sport_key: str = None) -> List[AverageOdds]:

@@ -26,6 +26,8 @@ class BetfairEvent(models.Model):
     event_id = models.CharField(max_length=50, unique=True)
     event_type = models.ForeignKey(BetfairEventType, on_delete=models.CASCADE)
     name = models.CharField(max_length=200)
+    competition_id = models.CharField(max_length=50, blank=True)
+    competition_name = models.CharField(max_length=200, blank=True)
     country_code = models.CharField(max_length=10, blank=True)
     timezone = models.CharField(max_length=50, blank=True)
     open_date = models.DateTimeField()

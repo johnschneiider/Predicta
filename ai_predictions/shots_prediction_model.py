@@ -415,3 +415,4 @@ class ShotsPredictionModel:
 
 # Instancia global del modelo
 shots_prediction_model = ShotsPredictionModel()
+

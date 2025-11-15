@@ -3,268 +3,258 @@
 
 {% block title %}Resultado de Predicción - IA{% endblock %}
 
-{% block extra_css %}
+{% block content %}
 <style>
-    .result-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 20px;
-        padding: 30px;
-        color: white;
-        margin-bottom: 30px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-    }
-    
-    .prediction-value {
-        font-size: 4rem;
-        font-weight: bold;
-        text-align: center;
-        margin: 20px 0;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-    }
-    
-    .confidence-bar {
-        height: 20px;
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 10px;
-        overflow: hidden;
-        margin: 10px 0;
-    }
-    
-    .confidence-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #28a745, #20c997);
-        transition: width 2s ease;
-        border-radius: 10px;
-    }
-    
-    .probability-card {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-        border-left: 5px solid #667eea;
-    }
-    
+/* Estilos para la tabla de resultados */
+.models-table {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0, 171, 228, 0.15);
+    padding: 30px;
+    margin-bottom: 30px;
+}
+
+.models-table h4 {
+    color: #1E3A8A;
+    font-weight: 600;
+    margin-bottom: 25px;
+}
+
+.table-responsive {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.table {
+    margin-bottom: 0;
+    background: white;
+}
+
+.table thead th {
+    background: linear-gradient(135deg, #1E3A8A 0%, #1E40AF 100%) !important;
+    color: white !important;
+    font-weight: 600;
+    text-align: center;
+    padding: 15px 10px;
+    border: none;
+    font-size: 14px;
+}
+
+.table tbody tr {
+    border-bottom: 2px solid #E9F1FA;
+    transition: all 0.3s ease;
+}
+
+.table tbody tr:hover {
+    background: linear-gradient(135deg, #E9F1FA 0%, #F8FAFC 100%) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 171, 228, 0.2);
+}
+
+.table tbody td {
+    padding: 20px 15px;
+    vertical-align: middle;
+    border: none;
+    text-align: center;
+}
+
+/* Estilos para el modelo destacado */
+.model-row {
+    background: linear-gradient(135deg, #00ABE4 0%, #0099CC 100%) !important;
+    color: white !important;
+    font-weight: 600;
+}
+
+.model-row:hover {
+    background: linear-gradient(135deg, #0099CC 0%, #0088BB 100%) !important;
+    color: white !important;
+}
+
+.model-row td {
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Iconos de modelos */
+.model-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 16px;
+    margin-right: 15px;
+    color: white;
+}
+
+.poisson-icon { background: linear-gradient(135deg, #FF6B6B, #EE5A52); }
+.bayesian-icon { background: linear-gradient(135deg, #4ECDC4, #44A08D); }
+.ensemble-icon { background: linear-gradient(135deg, #45B7D1, #96C93D); }
+.linear-icon { background: linear-gradient(135deg, #F093FB, #F5576C); }
+.historical-icon { background: linear-gradient(135deg, #4FACFE, #00F2FE); }
+
+.model-name {
+    font-weight: 600;
+    font-size: 16px;
+    margin-bottom: 5px;
+}
+
+/* Predicción principal */
+.prediction-number {
+    font-size: 24px;
+    font-weight: bold;
+    color: #00ABE4;
+}
+
+.model-row .prediction-number {
+    color: white !important;
+    font-size: 28px;
+}
+
+/* Badges de confianza */
+.confidence-badge {
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.confidence-high {
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: white;
+}
+
+.confidence-medium {
+    background: linear-gradient(135deg, #F59E0B, #D97706);
+    color: white;
+}
+
+.confidence-low {
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: white;
+}
+
+/* Barras de probabilidad */
+.probability-bar {
+    width: 100px;
+    height: 8px;
+    background: #E5E7EB;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.probability-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00ABE4, #0099CC);
+    border-radius: 4px;
+    transition: width 0.8s ease;
+}
+
+.probability-percentage {
+    font-weight: 600;
+    color: #1E3A8A;
+    font-size: 13px;
+}
+
+.model-row .probability-percentage {
+    color: white !important;
+}
+
+/* Cards adicionales */
+.probability-card, .backtest-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 8px 25px rgba(0, 171, 228, 0.15);
+    border: 1px solid #E9F1FA;
+}
+
+.prediction-value {
+    font-size: 48px;
+    font-weight: bold;
+    text-align: center;
+    margin: 20px 0;
+}
+
+.backtest-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    margin: 10px 0;
+    background: #F8FAFC;
+    border-radius: 10px;
+    border-left: 4px solid #00ABE4;
+}
+
+/* Botones de acción */
+.action-buttons {
+    text-align: center;
+    margin: 40px 0;
+    padding: 30px;
+    background: linear-gradient(135deg, #E9F1FA 0%, #F8FAFC 100%);
+    border-radius: 15px;
+}
+
+.btn-action {
+    margin: 0 10px;
+    padding: 12px 25px;
+    border-radius: 25px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.btn-action:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 171, 228, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
     .models-table {
-        background: white;
-        border-radius: 15px;
         padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
     }
     
-    .model-row {
-        border-bottom: 1px solid #eee;
-        padding: 15px 0;
-        transition: background-color 0.3s ease;
+    .table thead th {
+        font-size: 12px;
+        padding: 10px 5px;
     }
     
-    .model-row:hover {
-        background-color: #f8f9fa;
-    }
-    
-    .model-row:last-child {
-        border-bottom: none;
-    }
-    
-    .model-name {
-        font-weight: bold;
-        color: #495057;
-        font-size: 1.1rem;
-    }
-    
-    .prediction-number {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #007bff;
-    }
-    
-    .confidence-badge {
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.9rem;
-        font-weight: bold;
-    }
-    
-    .confidence-high {
-        background-color: #d4edda;
-        color: #155724;
-    }
-    
-    .confidence-medium {
-        background-color: #fff3cd;
-        color: #856404;
-    }
-    
-    .confidence-low {
-        background-color: #f8d7da;
-        color: #721c24;
-    }
-    
-    .probability-bar {
-        width: 100px;
-        height: 8px;
-        background: #e9ecef;
-        border-radius: 4px;
-        overflow: hidden;
-    }
-    
-    .probability-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #28a745, #20c997);
-        transition: width 1s ease;
-    }
-    
-    .match-info {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 15px;
-        padding: 20px;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    .action-buttons {
-        text-align: center;
-        margin-top: 30px;
-    }
-    
-    .btn-action {
-        margin: 5px;
-        border-radius: 25px;
-        padding: 10px 25px;
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    
-    .backtest-card {
-        background: #f8f9fa;
-        border-radius: 15px;
-        padding: 20px;
-        margin-top: 20px;
-    }
-    
-    .backtest-title {
-        color: #495057;
-        font-weight: bold;
-        margin-bottom: 15px;
-    }
-    
-    .backtest-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 0;
-        border-bottom: 1px solid #dee2e6;
-    }
-    
-    .backtest-item:last-child {
-        border-bottom: none;
+    .table tbody td {
+        padding: 15px 8px;
+        font-size: 13px;
     }
     
     .model-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        margin-right: 15px;
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+        margin-right: 10px;
     }
     
-    .poisson-icon { background: linear-gradient(45deg, #ff6b6b, #ee5a24); }
-    .bayesian-icon { background: linear-gradient(45deg, #667eea, #764ba2); }
-    .ensemble-icon { background: linear-gradient(45deg, #f093fb, #f5576c); }
-    .linear-icon { background: linear-gradient(45deg, #4ecdc4, #44a08d); }
-    .historical-icon { background: linear-gradient(45deg, #a8edea, #fed6e3); color: #333; }
-    
-    /* Estilos para la gráfica histórica */
-    .chart-container {
-        background: #ffffff;
-        border-radius: 10px;
-        padding: 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-        text-align: center;
+    .prediction-number {
+        font-size: 20px;
     }
     
-    #leagueHistoricalChart {
-        max-width: 100%;
-        height: auto;
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
-        background: #ffffff;
+    .probability-bar {
+        width: 80px;
     }
-    
-    .chart-info {
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 15px;
-        border: 1px solid #e9ecef;
-    }
-    
-    .chart-info .badge {
-        font-size: 0.9rem;
-        padding: 8px 15px;
-        border-radius: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    
-    .chart-info .badge:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-    }
-    
-    .chart-info .badge i {
-        margin-right: 5px;
-    }
-    
-    /* Responsive para la gráfica */
-    @media (max-width: 768px) {
-        #leagueHistoricalChart {
-            width: 100%;
-            height: 300px;
-        }
-        
-        .chart-container {
-            padding: 15px;
-        }
-        
-        .chart-info .row {
-            flex-direction: column;
-        }
-        
-        .chart-info .col-md-4 {
-            margin-bottom: 10px;
-        }
-    }
-    
-    @media (max-width: 576px) {
-        #leagueHistoricalChart {
-            height: 250px;
-        }
-        
-        .chart-info .badge {
-            font-size: 0.8rem;
-            padding: 6px 12px;
-        }
-    }
+}
 </style>
-{% endblock %}
 
-{% block content %}
 <div class="container-fluid">
     <!-- Header con información del partido -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="result-card">
-                <div class="match-info">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
                     <div class="row align-items-center">
-                        <div class="col-md-8">
+                        <div class="col-md-8 text-center">
                             <h2 class="mb-2">
                                 <i class="fas fa-futbol"></i> 
                                 {{ prediction.home_team }} vs {{ prediction.away_team }}
@@ -275,11 +265,9 @@
                                 <i class="fas fa-chart-bar"></i> {{ prediction.prediction_type|title }}
                             </p>
                         </div>
-                        <div class="col-md-4 text-end">
-                            <div class="text-center">
-                                <div class="h4 mb-0">Análisis Multi-Modelo</div>
-                                <div class="h6">{{ prediction.predictions|length }} Modelos Estadísticos</div>
-                            </div>
+                        <div class="col-md-4 text-center">
+                            <div class="h4 mb-0">Análisis Multi-Modelo</div>
+                            <div class="h6">{{ prediction.predictions|length }} Modelos Estadísticos</div>
                         </div>
                     </div>
                 </div>

@@ -3,474 +3,678 @@
 {% block title %}Próximos Partidos - Bot de Apuestas{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>
-                <i class="fas fa-calendar-alt"></i> 
-                Próximos Partidos
-                <small class="text-muted">({{ total_matches }} partidos programados)</small>
-            </h1>
-            <div>
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
-                        <i class="fas fa-filter"></i> {{ sport_key|title }}
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="?sport=soccer_epl">Premier League</a></li>
-                        <li><a class="dropdown-item" href="?sport=soccer_spain_la_liga">La Liga</a></li>
-                        <li><a class="dropdown-item" href="?sport=soccer_germany_bundesliga">Bundesliga</a></li>
-                        <li><a class="dropdown-item" href="?sport=soccer_italy_serie_a">Serie A</a></li>
-                        <li><a class="dropdown-item" href="?sport=soccer_france_ligue_one">Ligue 1</a></li>
-                        <li><a class="dropdown-item" href="?sport=soccer_uefa_champs_league">Champions League</a></li>
-                    </ul>
-                </div>
-                <a href="{% url 'odds:live_odds' %}" class="btn btn-success ms-2">
-                    <i class="fas fa-broadcast-tower"></i> Cuotas en Vivo
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Información de actualización -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle"></i>
-            <strong>Información:</strong> Los partidos están ordenados por proximidad (más próximos primero). 
-            Las horas se muestran en <strong>hora colombiana (UTC-5)</strong>. 
-            Haz clic en cualquier encabezado de columna para reordenar.
-        </div>
-    </div>
-</div>
-
-<!-- Próximos Partidos -->
-<div class="row">
-    <div class="col-12">
-        {% if upcoming_matches %}
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-calendar-alt"></i>
-                        Próximos Partidos Programados
-                        <span class="badge bg-light text-dark ms-2">{{ total_matches }} partidos</span>
-                    </h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped mb-0">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>Fecha <span class="sort-indicator">↑</span></th>
-                                    <th>Hora</th>
-                                    <th>Liga</th>
-                                    <th>Equipo Local</th>
-                                    <th>vs</th>
-                                    <th>Equipo Visitante</th>
-                                    <th>Remates Totales</th>
-                                    <th>Remates a Puerta</th>
-                                    <th>Goles Totales</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for match in upcoming_matches %}
-                                <tr class="match-row">
-                                    <td>
-                                        <strong class="match-date" data-utc-time="{{ match.utc_timestamp }}">
-                                            {{ match.colombia_date }}
-                                        </strong>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <i class="fas fa-clock text-primary me-2"></i>
-                                            <div>
-                                                <strong class="colombian-time" data-utc-time="{{ match.utc_timestamp }}">
-                                                    {{ match.colombia_time }}
-                                                </strong>
-                                                <small class="text-muted d-block">
-                                                    <i class="fas fa-flag text-warning me-1"></i>Colombia
-                                                </small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info">{{ match.sport_title }}</span>
-                                    </td>
-                                    <td>
-                                        <strong class="text-primary">{{ match.home_team }}</strong>
-                                    </td>
-                                    <td class="text-center">
-                                        <i class="fas fa-vs text-muted"></i>
-                                    </td>
-                                    <td>
-                                        <strong class="text-success">{{ match.away_team }}</strong>
-                                    </td>
-                                    <td>
-                                        <div class="prediction-cell">
-                                            <span class="prediction-value">{{ match.shots_total_prediction }}</span>
-                                            <small class="text-muted d-block">IA</small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="prediction-cell">
-                                            <span class="prediction-value">{{ match.shots_on_target_prediction }}</span>
-                                            <small class="text-muted d-block">IA</small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="prediction-cell">
-                                            <span class="prediction-value">{{ match.goals_total_prediction }}</span>
-                                            <small class="text-muted d-block">IA</small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="{% url 'odds:match_detail' match.id %}" 
-                                               class="btn btn-outline-primary" title="Ver Cuotas">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <button class="btn btn-outline-secondary" 
-                                                    onclick="addToCalendar('{{ match.id }}', '{{ match.home_team }} vs {{ match.away_team }}', '{{ match.commence_time }}')"
-                                                    title="Agregar al Calendario">
-                                                <i class="fas fa-calendar-plus"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        {% else %}
-            <div class="text-center py-5">
-                <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
-                <h4>No hay próximos partidos disponibles</h4>
-                <p class="text-muted">
-                    No se encontraron partidos programados para el deporte seleccionado.
-                </p>
-                <button class="btn btn-primary" onclick="location.reload()">
-                    <i class="fas fa-sync-alt"></i> Actualizar
-                </button>
-            </div>
-        {% endif %}
-    </div>
-</div>
-
-<!-- Estadísticas -->
-{% if upcoming_matches %}
-<div class="row mt-4">
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <h5 class="card-title text-primary">{{ total_matches }}</h5>
-                <p class="card-text">Total Partidos</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <h5 class="card-title text-success">{{ matches_by_date|length }}</h5>
-                <p class="card-text">Días con Partidos</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <h5 class="card-title text-info">{{ sport_key|title }}</h5>
-                <p class="card-text">Liga Actual</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <h5 class="card-title text-warning" id="next-match-time">
-                    {% if upcoming_matches %}
-                        {{ upcoming_matches.0.colombia_time }}
-                    {% else %}
-                        --
-                    {% endif %}
-                </h5>
-                <p class="card-text">Próximo Partido</p>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-{% endblock %}
-
-{% block extra_css %}
 <style>
-    .match-row {
-        transition: background-color 0.2s ease-in-out;
+/* Estilos mejorados para la tabla de próximos partidos */
+.matches-container {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0, 171, 228, 0.15);
+    overflow: hidden;
+    margin-bottom: 30px;
+}
+
+.matches-header {
+    background: linear-gradient(135deg, #1E3A8A 0%, #1E40AF 100%);
+    color: white;
+    padding: 20px 30px;
+    border-bottom: 3px solid #00ABE4;
+}
+
+.matches-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.matches-count {
+    background: rgba(0, 171, 228, 0.2);
+    color: #00ABE4;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.matches-table {
+    margin: 0;
+    background: white;
+}
+
+.matches-table thead th {
+    background: linear-gradient(135deg, #00ABE4 0%, #0099CC 100%);
+    color: white;
+    font-weight: 600;
+    text-align: center;
+    padding: 15px 12px;
+    border: none;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.matches-table tbody tr {
+    border-bottom: 2px solid #E9F1FA;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.matches-table tbody tr:hover {
+    background: linear-gradient(135deg, #E9F1FA 0%, #F8FAFC 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0, 171, 228, 0.1);
+}
+
+.matches-table tbody tr:nth-child(even) {
+    background: #FAFBFC;
+}
+
+.matches-table tbody tr:nth-child(even):hover {
+    background: linear-gradient(135deg, #E9F1FA 0%, #F8FAFC 100%);
+}
+
+.matches-table tbody td {
+    padding: 18px 12px;
+    vertical-align: middle;
+    border: none;
+    text-align: center;
+    font-size: 14px;
+}
+
+/* Estilos específicos para columnas */
+.date-cell {
+    font-weight: 600;
+    color: #1E3A8A;
+    font-size: 15px;
+}
+
+.time-cell {
+    text-align: left;
+}
+
+.time-main {
+    font-weight: 600;
+    color: #1E3A8A;
+    font-size: 16px;
+    margin-bottom: 2px;
+}
+
+.time-zone {
+    font-size: 11px;
+    color: #64748B;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.league-badge {
+    background: linear-gradient(135deg, #00ABE4 0%, #0099CC 100%);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.team-home {
+    font-weight: 600;
+    color: #1E3A8A;
+    font-size: 15px;
+    text-align: right;
+}
+
+.team-away {
+    font-weight: 600;
+    color: #059669;
+    font-size: 15px;
+    text-align: left;
+}
+
+.vs-separator {
+    color: #64748B;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.prediction-cell {
+    background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%);
+    border: 2px solid #CBD5E1;
+    border-radius: 10px;
+    padding: 12px 8px;
+    margin: 4px;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.prediction-value {
+    font-size: 18px;
+    font-weight: bold;
+    color: #64748B;
+    margin-bottom: 4px;
+}
+
+.prediction-label {
+    font-size: 10px;
+    color: #94A3B8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 2px solid #E2E8F0;
+    background: white;
+    color: #64748B;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.action-btn:hover {
+    background: #00ABE4;
+    color: white;
+    border-color: #00ABE4;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 171, 228, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .matches-table tbody td {
+        padding: 12px 8px;
+        font-size: 13px;
     }
     
-    .match-row:hover {
-        background-color: #f8f9fa !important;
-    }
-    
-    .table-responsive {
-        border-radius: 0.375rem;
-        overflow: hidden;
-    }
-    
-    .table thead th {
-        border-bottom: 2px solid #dee2e6;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.875rem;
-        letter-spacing: 0.5px;
-    }
-    
-    .table tbody td {
-        vertical-align: middle;
-        border-bottom: 1px solid #dee2e6;
-    }
-    
-    .badge {
-        font-size: 0.75rem;
-    }
-    
-    .btn-group-sm .btn {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.75rem;
-    }
-    
-    .card-header {
-        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
-    }
-    
-    .dropdown-menu {
-        max-height: 300px;
-        overflow-y: auto;
-    }
-    
-    .text-primary {
-        color: #0d6efd !important;
-    }
-    
-    .text-success {
-        color: #198754 !important;
-    }
-    
-    .table-striped > tbody > tr:nth-of-type(odd) > td {
-        background-color: rgba(0,0,0,.02);
-    }
-    
-    .sort-indicator {
-        font-size: 0.8em;
-        color: #6c757d;
-        margin-left: 5px;
-    }
-    
-    .table th:hover {
-        background-color: #e9ecef;
-        transition: background-color 0.2s ease;
-    }
-    
-    /* Estilos para celdas de predicción */
     .prediction-cell {
-        text-align: center;
-        padding: 8px;
+        padding: 8px 6px;
+        min-height: 50px;
     }
     
     .prediction-value {
-        font-size: 1.1em;
-        font-weight: bold;
-        color: #2c3e50;
-        display: block;
-        margin-bottom: 2px;
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .matches-header {
+        padding: 15px 20px;
     }
     
-    .prediction-value:not([data-value="N/A"]) {
-        background: linear-gradient(135deg, #3498db, #2980b9);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 12px;
-        display: inline-block;
-        min-width: 40px;
-        box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
+    .matches-header h2 {
+        font-size: 20px;
     }
     
-    .prediction-value[data-value="N/A"] {
-        color: #95a5a6;
-        font-style: italic;
+    .matches-table thead th {
+        padding: 10px 6px;
+        font-size: 12px;
     }
     
-    /* Responsive para predicciones */
-    @media (max-width: 1200px) {
-        .prediction-cell {
-            padding: 4px;
-        }
-        
-        .prediction-value {
-            font-size: 0.9em;
-        }
+    .matches-table tbody td {
+        padding: 10px 6px;
+        font-size: 12px;
     }
+    
+    .team-home, .team-away {
+        font-size: 13px;
+    }
+    
+    .prediction-cell {
+        padding: 6px 4px;
+        min-height: 45px;
+    }
+    
+    .prediction-value {
+        font-size: 14px;
+    }
+}
+
+/* Mejoras para el header de la página */
+.page-header {
+    background: linear-gradient(135deg, #E9F1FA 0%, #F8FAFC 100%);
+    border-radius: 15px;
+    padding: 25px 30px;
+    margin-bottom: 25px;
+    border: 1px solid #E2E8F0;
+}
+
+.page-title {
+    color: #1E3A8A;
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.page-subtitle {
+    color: #64748B;
+    font-size: 16px;
+    margin: 5px 0 0 0;
+}
+
+.filter-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.filter-btn {
+    background: white;
+    border: 2px solid #00ABE4;
+    color: #00ABE4;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.filter-btn:hover {
+    background: #00ABE4;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 171, 228, 0.3);
+}
+
+.live-btn {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.live-btn:hover {
+    background: linear-gradient(135deg, #047857 0%, #065F46 100%);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+}
+
+.info-banner {
+    background: linear-gradient(135deg, #DBEAFE 0%, #E0F2FE 100%);
+    border: 2px solid #00ABE4;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.info-banner .fas {
+    color: #00ABE4;
+    margin-right: 10px;
+}
+
+.info-text {
+    color: #1E3A8A;
+    font-weight: 500;
+    margin: 0;
+}
+
+.no-matches {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0, 171, 228, 0.15);
+}
+
+.no-matches .fas {
+    font-size: 64px;
+    color: #CBD5E1;
+    margin-bottom: 20px;
+}
+
+.no-matches h4 {
+    color: #64748B;
+    margin-bottom: 15px;
+}
+
+.no-matches p {
+    color: #94A3B8;
+    margin-bottom: 25px;
+}
+
+.refresh-btn {
+    background: linear-gradient(135deg, #00ABE4 0%, #0099CC 100%);
+    border: none;
+    color: white;
+    padding: 12px 25px;
+    border-radius: 25px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.refresh-btn:hover {
+    background: linear-gradient(135deg, #0099CC 0%, #0088BB 100%);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 171, 228, 0.3);
+}
 </style>
+
+<div class="container-fluid">
+    <!-- Header de la página -->
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="page-title">
+                    <i class="fas fa-calendar-alt me-3"></i>
+                    Próximos Partidos
+                </h1>
+                <p class="page-subtitle">{{ total_matches }} partidos programados</p>
+            </div>
+            <div class="col-md-4">
+                <div class="filter-controls justify-content-md-end">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="filter-btn dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-filter me-2"></i>{{ sport_key|title }}
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="?sport=soccer_epl">Premier League</a></li>
+                            <li><a class="dropdown-item" href="?sport=soccer_spain_la_liga">La Liga</a></li>
+                            <li><a class="dropdown-item" href="?sport=soccer_germany_bundesliga">Bundesliga</a></li>
+                            <li><a class="dropdown-item" href="?sport=soccer_italy_serie_a">Serie A</a></li>
+                            <li><a class="dropdown-item" href="?sport=soccer_france_ligue_one">Ligue 1</a></li>
+                            <li><a class="dropdown-item" href="?sport=soccer_uefa_champs_league">Champions League</a></li>
+                        </ul>
+                    </div>
+                    {% if request.GET.multiple_sports == 'true' %}
+                        <a href="?sport={{ sport_key }}" class="filter-btn">
+                            <i class="fas fa-globe me-2"></i>Solo {{ sport_key|title }}
+                        </a>
+                    {% else %}
+                        <a href="?sport={{ sport_key }}&multiple_sports=true" class="filter-btn">
+                            <i class="fas fa-globe me-2"></i>Todos los Deportes
+                        </a>
+                    {% endif %}
+                    <a href="{% url 'odds:live_odds' %}" class="live-btn">
+                        <i class="fas fa-broadcast-tower me-2"></i>Cuotas en Vivo
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Banner informativo -->
+    <div class="info-banner">
+        <p class="info-text">
+            <i class="fas fa-info-circle"></i>
+            <strong>Información:</strong> 
+            {% if request.GET.multiple_sports == 'true' %}
+                Mostrando partidos de <strong>múltiples ligas de fútbol</strong> para mayor variedad. 
+            {% else %}
+                Mostrando partidos de <strong>{{ sport_key|title }}</strong>. 
+            {% endif %}
+            Los partidos están ordenados por proximidad (más próximos primero). 
+            Las horas se muestran en <strong>hora colombiana (UTC-5)</strong>. 
+            Haz clic en cualquier encabezado de columna para reordenar.
+        </p>
+    </div>
+
+    <!-- Tabla de partidos -->
+    {% if upcoming_matches %}
+        <div class="matches-container">
+            <div class="matches-header">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="mb-0">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            Próximos Partidos Programados
+                        </h2>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <span class="matches-count">{{ total_matches }} partidos</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table matches-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 12%;">Fecha</th>
+                            <th style="width: 15%;">Hora</th>
+                            <th style="width: 10%;">Liga</th>
+                            <th style="width: 18%;">Equipo Local</th>
+                            <th style="width: 5%;">vs</th>
+                            <th style="width: 18%;">Equipo Visitante</th>
+                            <th style="width: 8%;">Remates</th>
+                            <th style="width: 8%;">A Puerta</th>
+                            <th style="width: 8%;">Goles</th>
+                            <th style="width: 8%;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for match in upcoming_matches %}
+                        <tr class="match-row">
+                            <td class="date-cell">{{ match.colombia_date }}</td>
+                            <td class="time-cell">
+                                <div class="time-main">{{ match.colombia_time }}</div>
+                                <div class="time-zone">
+                                    <i class="fas fa-flag"></i>Colombia
+                                </div>
+                            </td>
+                            <td>
+                                <span class="league-badge">{{ match.sport_title }}</span>
+                            </td>
+                            <td class="team-home">{{ match.home_team }}</td>
+                            <td class="vs-separator">vs</td>
+                            <td class="team-away">{{ match.away_team }}</td>
+                            <td>
+                                <div class="prediction-cell">
+                                    <div class="prediction-value">{{ match.shots_total_prediction }}</div>
+                                    <div class="prediction-label">IA</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="prediction-cell">
+                                    <div class="prediction-value">{{ match.shots_on_target_prediction }}</div>
+                                    <div class="prediction-label">IA</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="prediction-cell">
+                                    <div class="prediction-value">{{ match.goals_total_prediction }}</div>
+                                    <div class="prediction-label">IA</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <a href="{% url 'odds:match_detail' match.id %}" 
+                                       class="action-btn" title="Ver Cuotas">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <button class="action-btn" 
+                                            onclick="addToCalendar('{{ match.id }}', '{{ match.home_team }} vs {{ match.away_team }}', '{{ match.commence_time }}')"
+                                            title="Agregar al Calendario">
+                                        <i class="fas fa-calendar-plus"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <div class="no-matches">
+            <i class="fas fa-calendar-times"></i>
+            <h4>No hay próximos partidos disponibles</h4>
+            <p>No se encontraron partidos programados para el deporte seleccionado.</p>
+            <button class="refresh-btn" onclick="location.reload()">
+                <i class="fas fa-sync-alt me-2"></i>Actualizar
+            </button>
+        </div>
+    {% endif %}
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    function addToCalendar(matchId, matchTitle, matchTime) {
-        // Crear evento de calendario
-        const event = {
-            title: matchTitle,
-            start: new Date(matchTime),
-            end: new Date(new Date(matchTime).getTime() + 2 * 60 * 60 * 1000), // +2 horas
-            description: `Partido de fútbol - ID: ${matchId}`,
-            location: 'Estadio'
-        };
-        
-        // Generar URL para Google Calendar
-        const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${event.start.toISOString().replace(/[-:]/g, '').split('.')[0]}Z/${event.end.toISOString().replace(/[-:]/g, '').split('.')[0]}Z&details=${encodeURIComponent(event.description)}`;
-        
-        // Abrir en nueva ventana
-        window.open(googleUrl, '_blank');
-        
-        // Mostrar mensaje de confirmación
-        const toast = document.createElement('div');
-        toast.className = 'toast position-fixed top-0 end-0 m-3';
-        toast.innerHTML = `
-            <div class="toast-header">
-                <i class="fas fa-calendar-plus text-success me-2"></i>
-                <strong class="me-auto">Agregado al Calendario</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-            </div>
-            <div class="toast-body">
-                ${event.title} agregado a tu calendario.
-            </div>
-        `;
-        document.body.appendChild(toast);
-        
-        const bsToast = new bootstrap.Toast(toast);
-        bsToast.show();
-        
-        // Remover toast después de mostrar
-        setTimeout(() => {
-            toast.remove();
-        }, 3000);
-    }
+function addToCalendar(matchId, matchTitle, matchTime) {
+    // Crear evento de calendario
+    const event = {
+        title: matchTitle,
+        start: new Date(matchTime),
+        end: new Date(new Date(matchTime).getTime() + 2 * 60 * 60 * 1000), // +2 horas
+        description: `Partido de fútbol - ID: ${matchId}`,
+        location: 'Estadio'
+    };
     
-    // Funcionalidad de ordenamiento de tabla
-    function sortTable(columnIndex) {
-        const table = document.querySelector('.table');
-        const tbody = table.querySelector('tbody');
-        const rows = Array.from(tbody.querySelectorAll('tr'));
+    // Generar URL para Google Calendar
+    const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${event.start.toISOString().replace(/[-:]/g, '').split('.')[0]}Z/${event.end.toISOString().replace(/[-:]/g, '').split('.')[0]}Z&details=${encodeURIComponent(event.description)}`;
+    
+    // Abrir en nueva ventana
+    window.open(googleUrl, '_blank');
+    
+    // Mostrar mensaje de confirmación
+    const toast = document.createElement('div');
+    toast.className = 'toast position-fixed top-0 end-0 m-3';
+    toast.innerHTML = `
+        <div class="toast-header">
+            <i class="fas fa-calendar-plus text-success me-2"></i>
+            <strong class="me-auto">Agregado al Calendario</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">
+            ${event.title} agregado a tu calendario.
+        </div>
+    `;
+    document.body.appendChild(toast);
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    // Remover toast después de mostrar
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+// Funcionalidad de ordenamiento de tabla
+function sortTable(columnIndex) {
+    const table = document.querySelector('.matches-table');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    // Determinar si el orden actual es ascendente o descendente
+    const currentOrder = table.getAttribute('data-sort-order') || 'asc';
+    const newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+    
+    // Ordenar filas
+    rows.sort((a, b) => {
+        const aValue = a.cells[columnIndex].textContent.trim();
+        const bValue = b.cells[columnIndex].textContent.trim();
         
-        // Determinar si el orden actual es ascendente o descendente
-        const currentOrder = table.getAttribute('data-sort-order') || 'asc';
-        const newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
-        
-        // Ordenar filas
-        rows.sort((a, b) => {
-            const aValue = a.cells[columnIndex].textContent.trim();
-            const bValue = b.cells[columnIndex].textContent.trim();
+        // Para fechas y horas, usar el atributo data-utc-time para comparación precisa
+        if (columnIndex === 0 || columnIndex === 1) {
+            // Buscar elementos con data-utc-time (fecha o hora)
+            const aTimeElement = a.querySelector('[data-utc-time]');
+            const bTimeElement = b.querySelector('[data-utc-time]');
             
-            // Para fechas y horas, usar el atributo data-utc-time para comparación precisa
-            if (columnIndex === 0 || columnIndex === 1) {
-                // Buscar elementos con data-utc-time (fecha o hora)
-                const aTimeElement = a.querySelector('[data-utc-time]');
-                const bTimeElement = b.querySelector('[data-utc-time]');
+            if (aTimeElement && bTimeElement) {
+                const aUtcTime = aTimeElement.getAttribute('data-utc-time');
+                const bUtcTime = bTimeElement.getAttribute('data-utc-time');
                 
-                if (aTimeElement && bTimeElement) {
-                    const aUtcTime = aTimeElement.getAttribute('data-utc-time');
-                    const bUtcTime = bTimeElement.getAttribute('data-utc-time');
-                    
-                    if (aUtcTime && bUtcTime) {
-                        const aDate = new Date(aUtcTime);
-                        const bDate = new Date(bUtcTime);
-                        return newOrder === 'asc' ? aDate - bDate : bDate - aDate;
-                    }
+                if (aUtcTime && bUtcTime) {
+                    const aDate = new Date(aUtcTime);
+                    const bDate = new Date(bUtcTime);
+                    return newOrder === 'asc' ? aDate - bDate : bDate - aDate;
                 }
-                
-                // Fallback: usar texto si no hay atributos UTC
-                const aDateStr = a.cells[0].textContent.trim() + ' ' + a.cells[1].textContent.trim();
-                const bDateStr = b.cells[0].textContent.trim() + ' ' + b.cells[1].textContent.trim();
-                
-                // Convertir formato DD/MM/YYYY HH:MM a Date
-                const parseDate = (dateStr) => {
-                    const [datePart, timePart] = dateStr.split(' ');
-                    const [day, month, year] = datePart.split('/');
-                    const [hour, minute] = timePart.split(':');
-                    return new Date(year, month - 1, day, hour, minute);
-                };
-                
-                const aDate = parseDate(aDateStr);
-                const bDate = parseDate(bDateStr);
-                return newOrder === 'asc' ? aDate - bDate : bDate - aDate;
             }
             
-            // Para columnas de predicciones (6, 7, 8), comparar numéricamente
-            if (columnIndex >= 6 && columnIndex <= 8) {
-                const aNum = parseFloat(aValue) || 0;
-                const bNum = parseFloat(bValue) || 0;
-                return newOrder === 'asc' ? aNum - bNum : bNum - aNum;
-            }
+            // Fallback: usar texto si no hay atributos UTC
+            const aDateStr = a.cells[0].textContent.trim() + ' ' + a.cells[1].textContent.trim();
+            const bDateStr = b.cells[0].textContent.trim() + ' ' + b.cells[1].textContent.trim();
             
-            // Para texto, comparación alfabética
-            return newOrder === 'asc' 
-                ? aValue.localeCompare(bValue)
-                : bValue.localeCompare(aValue);
-        });
-        
-        // Reorganizar filas en el DOM
-        rows.forEach(row => tbody.appendChild(row));
-        
-        // Actualizar atributo de orden
-        table.setAttribute('data-sort-order', newOrder);
-        
-        // Actualizar indicadores visuales
-        document.querySelectorAll('.sort-indicator').forEach(indicator => {
-            indicator.innerHTML = '';
-        });
-        
-        const header = table.querySelectorAll('th')[columnIndex];
-        const indicator = header.querySelector('.sort-indicator');
-        if (indicator) {
-            indicator.innerHTML = newOrder === 'asc' ? '↑' : '↓';
+            // Convertir formato DD/MM/YYYY HH:MM a Date
+            const parseDate = (dateStr) => {
+                const [datePart, timePart] = dateStr.split(' ');
+                const [day, month, year] = datePart.split('/');
+                const [hour, minute] = timePart.split(':');
+                return new Date(year, month - 1, day, hour, minute);
+            };
+            
+            const aDate = parseDate(aDateStr);
+            const bDate = parseDate(bDateStr);
+            return newOrder === 'asc' ? aDate - bDate : bDate - aDate;
         }
-    }
-    
-    // Las fechas y horas ya vienen procesadas desde el servidor en hora colombiana
-    // Esta función ya no es necesaria, pero la mantenemos por compatibilidad
-    function convertToColombianTime() {
-        console.log('Fechas y horas ya procesadas en el servidor');
-    }
-    
-    // Hacer las cabeceras clickeables
-    document.addEventListener('DOMContentLoaded', function() {
-        // Convertir horas a Colombia primero
-        convertToColombianTime();
         
-        const headers = document.querySelectorAll('.table th');
-        headers.forEach((header, index) => {
-            if (index < 10) { // Las primeras 10 columnas son ordenables (incluyendo las nuevas)
-                header.style.cursor = 'pointer';
-                header.innerHTML += ' <span class="sort-indicator"></span>';
-                header.addEventListener('click', () => sortTable(index));
-            }
-        });
+        // Para columnas de predicciones (6, 7, 8), comparar numéricamente
+        if (columnIndex >= 6 && columnIndex <= 8) {
+            const aNum = parseFloat(aValue) || 0;
+            const bNum = parseFloat(bValue) || 0;
+            return newOrder === 'asc' ? aNum - bNum : bNum - aNum;
+        }
         
-        // Ordenar por defecto por fecha (columna 0) en orden ascendente
-        const table = document.querySelector('.table');
-        if (table) {
-            table.setAttribute('data-sort-order', 'asc');
-            sortTable(0); // Ordenar por fecha
+        // Para texto, comparación alfabética
+        return newOrder === 'asc' 
+            ? aValue.localeCompare(bValue)
+            : bValue.localeCompare(aValue);
+    });
+    
+    // Reorganizar filas en el DOM
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Actualizar atributo de orden
+    table.setAttribute('data-sort-order', newOrder);
+    
+    // Actualizar indicadores visuales
+    document.querySelectorAll('.sort-indicator').forEach(indicator => {
+        indicator.innerHTML = '';
+    });
+    
+    const header = table.querySelectorAll('th')[columnIndex];
+    const indicator = header.querySelector('.sort-indicator');
+    if (indicator) {
+        indicator.innerHTML = newOrder === 'asc' ? '↑' : '↓';
+    }
+}
+
+// Hacer las cabeceras clickeables
+document.addEventListener('DOMContentLoaded', function() {
+    const headers = document.querySelectorAll('.matches-table th');
+    headers.forEach((header, index) => {
+        if (index < 10) { // Las primeras 10 columnas son ordenables
+            header.style.cursor = 'pointer';
+            header.innerHTML += ' <span class="sort-indicator"></span>';
+            header.addEventListener('click', () => sortTable(index));
         }
     });
     
-    // Auto-refresh cada 5 minutos
-    setInterval(function() {
-        if (confirm('¿Deseas actualizar la lista de próximos partidos?')) {
-            location.reload();
-        }
-    }, 300000); // 5 minutos
+    // Ordenar por defecto por fecha (columna 0) en orden ascendente
+    const table = document.querySelector('.matches-table');
+    if (table) {
+        table.setAttribute('data-sort-order', 'asc');
+        sortTable(0); // Ordenar por fecha
+    }
+});
+
+// Auto-refresh cada 5 minutos
+setInterval(function() {
+    if (confirm('¿Deseas actualizar la lista de próximos partidos?')) {
+        location.reload();
+    }
+}, 300000); // 5 minutos
 </script>
 {% endblock %}

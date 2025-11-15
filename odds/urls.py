@@ -9,7 +9,8 @@ app_name = 'odds'
 
 urlpatterns = [
     path('', views.OddsDashboardView.as_view(), name='dashboard'),
-    path('matches/', views.MatchesListView.as_view(), name='matches_list'),
+    path('matches/', views.UpcomingMatchesView.as_view(), name='matches_list'),
+    path('matches-local/', views.MatchesListView.as_view(), name='matches_local'),
     path('matches/<str:match_id>/', views.MatchDetailView.as_view(), name='match_detail'),
     path('live/', views.LiveOddsView.as_view(), name='live_odds'),
     path('upcoming/', views.UpcomingMatchesView.as_view(), name='upcoming_matches'),

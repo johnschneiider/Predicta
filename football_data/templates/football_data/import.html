@@ -5,32 +5,35 @@
 {% block extra_css %}
 <style>
     .alert-danger {
-        border-left: 4px solid #dc3545;
-        background-color: #f8d7da;
-        border-color: #f5c6cb;
+        border-left: 4px solid #DC3545;
+        background-color: rgba(220, 53, 69, 0.1);
+        border-color: #DC3545;
+        color: var(--azul-oscuro);
     }
     
     .alert-warning {
-        border-left: 4px solid #ffc107;
-        background-color: #fff3cd;
-        border-color: #ffeaa7;
+        border-left: 4px solid #FFC107;
+        background-color: rgba(255, 193, 7, 0.1);
+        border-color: #FFC107;
+        color: var(--azul-oscuro);
     }
     
     .alert-info {
-        border-left: 4px solid #0dcaf0;
-        background-color: #d1ecf1;
-        border-color: #bee5eb;
+        border-left: 4px solid var(--azul-electrico);
+        background-color: rgba(0, 123, 255, 0.1);
+        border-color: var(--azul-electrico);
+        color: var(--azul-oscuro);
     }
     
     .form-control.is-invalid,
     .form-select.is-invalid {
-        border-color: #dc3545;
+        border-color: #DC3545;
         box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
     }
     
     .form-control.is-invalid:focus,
     .form-select.is-invalid:focus {
-        border-color: #dc3545;
+        border-color: #DC3545;
         box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
     }
     

@@ -6,7 +6,7 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-# from django.contrib.auth.decorators import login_required  # Temporalmente deshabilitado
+from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.core.paginator import Paginator
@@ -21,7 +21,7 @@ from .services import OddsAPIService
 logger = logging.getLogger('odds')
 
 
-# @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class OddsDashboardView(View):
     """Vista principal del dashboard de cuotas"""
     
@@ -53,6 +53,7 @@ class OddsDashboardView(View):
 
 
 # @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class MatchesListView(View):
     """Lista de partidos con cuotas"""
     
@@ -95,6 +96,7 @@ class MatchesListView(View):
 
 
 # @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class MatchDetailView(View):
     """Detalle de un partido con todas sus cuotas"""
     
@@ -154,6 +156,7 @@ class MatchDetailView(View):
 
 
 @method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(login_required, name='dispatch')
 class SyncOddsView(View):
     """Vista para sincronizar cuotas desde la API"""
     
@@ -219,6 +222,7 @@ class SyncOddsView(View):
 
 
 # @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class UpcomingMatchesView(View):
     """Vista para mostrar próximos partidos programados"""
     
@@ -229,8 +233,9 @@ class UpcomingMatchesView(View):
             # Obtener parámetros
             sport_key = request.GET.get('sport', 'soccer_epl')
             
-            # Obtener próximos partidos
-            upcoming_matches = odds_service.get_upcoming_matches(sport_key)
+            # Obtener próximos partidos (incluir múltiples deportes si se solicita)
+            include_multiple = request.GET.get('multiple_sports', 'false').lower() == 'true'
+            upcoming_matches = odds_service.get_upcoming_matches(sport_key, include_multiple_sports=include_multiple)
             
             # Procesar fechas y convertir a hora colombiana
             from datetime import datetime, timezone, timedelta
@@ -247,7 +252,9 @@ class UpcomingMatchesView(View):
             # Verificar si hay datos suficientes para predicciones
             has_sufficient_data = False
             if league:
-                match_count = Match.objects.filter(league=league).count()
+                # Usar el modelo Match de football_data en lugar de odds
+                from football_data.models import Match as FootballMatch
+                match_count = FootballMatch.objects.filter(league=league).count()
                 has_sufficient_data = match_count >= 50  # Mínimo 50 partidos
             
             for match in upcoming_matches:
@@ -360,6 +367,7 @@ class UpcomingMatchesView(View):
 
 
 # @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class LiveOddsView(View):
     """Vista para mostrar cuotas en tiempo real"""
     
@@ -396,6 +404,7 @@ class LiveOddsView(View):
 
 
 # @method_decorator(login_required, name='dispatch')  # Temporalmente deshabilitado
+@method_decorator(login_required, name='dispatch')
 class SportsListView(View):
     """Lista de deportes disponibles"""
     

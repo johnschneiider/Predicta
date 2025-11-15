@@ -1,0 +1,72 @@
+cd /var/www/predicta.com.co
+source venv/bin/activate
+export DJANGO_SETTINGS_MODULE=betting_bot.settings_production
+
+# Hacer pull SIN tocar la base de datos
+git pull origin main
+
+# Copiar favicon
+cp static_assets/favicon.svg staticfiles/
+
+# Recopilar estáticos
+python manage.py collectstatic --no-input
+
+# Reiniciar servicio
+systemctl restart gunicorn
+systemctl status gunicornvenvvevv
+
+# ver logs
+journalctl -u gunicorn --no-pager -n 150
+
+# ==========================================
+# COMANDOS ADICIONALES DE DIAGNÓSTICO
+# ==========================================
+
+# Verificar estado del servicio
+# systemctl status gunicorn
+
+# Verificar si está activo
+# systemctl is-active gunicorn
+
+# Ver procesos de Gunicorn
+# pgrep -f gunicorn
+
+# Ver puertos en uso por Gunicorn
+# netstat -tlnp | grep gunicorn
+# o
+# ss -tlnp | grep gunicorn
+
+# Ver logs en tiempo real
+# journalctl -u gunicorn -f
+
+# Ver solo errores recientes
+# journalctl -u gunicorn --no-pager -n 200 | grep -i "error\|failed\|exception"
+
+# Reiniciar solo Gunicorn (sin hacer pull)
+# systemctl restart gunicorn
+
+# Reiniciar Gunicorn y Nginx
+# systemctl restart gunicorn && systemctl restart nginx
+
+# Verificar si el puerto está escuchando
+# sudo netstat -tlnp | grep :8000
+# (reemplaza 8000 con el puerto que uses)
+
+# Ver todos los puertos en uso
+# netstat -tlnp
+
+# ==========================================
+# CONFIGURACIÓN PARA BUNDESLIGA
+# ==========================================
+
+# Variables de entorno clave (en .env o service)
+# export SPORT_KEY=soccer_germany_bundesliga
+# export TARGET_SPORT_KEYS=soccer_germany_bundesliga
+# export BETFAIR_COMPETITION_NAMES="German Bundesliga"
+# export BETFAIR_MARKET_TYPES=MATCH_ODDS
+# export BETFAIR_MAX_MARKETS=30
+
+# Ejecutar sincronización enfocada
+# python manage.py sync_odds --sport soccer_germany_bundesliga
+# python manage.py sync_betfair --all
+# python manage.py run_bot --strategy bundesliga --interval 60

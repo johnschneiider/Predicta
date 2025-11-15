@@ -30,7 +30,7 @@ Dataset Histórico (2000-2024)
 └─────────────────────────────────────┘
          ↓ [10 predicciones base]
 ┌─────────────────────────────────────┐
-│     CAPA 2: IA ESPECIALIZADA       │
+│     CAPA 2: IA ESPECIALIZADA        │
 │  ┌─────────┬─────────┬────────────┐ │
 │  │   IA-1  │   IA-2  │    IA-3    │ │
 │  │Predictor│Predictor│Predictor   │ │
@@ -40,11 +40,11 @@ Dataset Histórico (2000-2024)
 └─────────────────────────────────────┘
          ↓ [3 predicciones especializadas]
 ┌─────────────────────────────────────┐
-│      CAPA 3: IA ORQUESTADORA       │
-│     ┌─────────────────────────┐    │
-│     │  Meta-Modelo Final      │    │
-│     │  [MLP/Bayesiano]        │    │
-│     └─────────────────────────┘    │
+│      CAPA 3: IA ORQUESTADORA        │
+│     ┌─────────────────────────┐     │
+│     │  Meta-Modelo Final      │     │
+│     │  [MLP/Bayesiano]        │     │
+│     └─────────────────────────┘     │
 └─────────────────────────────────────┘
          ↓
     Predicción Final Optimizada

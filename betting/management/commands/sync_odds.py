@@ -4,6 +4,8 @@ Comando para sincronizar cuotas de The Odds API
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
+from django.conf import settings
+
 from odds.services import OddsAPIService
 
 
@@ -14,8 +16,8 @@ class Command(BaseCommand):
         parser.add_argument(
             '--sport',
             type=str,
-            default='soccer_epl',
-            help='Clave del deporte a sincronizar (default: soccer_epl)'
+            default=None,
+            help='Clave del deporte a sincronizar (default: valor de settings.SPORT_KEY)'
         )
         parser.add_argument(
             '--sync-sports',
@@ -39,7 +41,7 @@ class Command(BaseCommand):
             )
         
         # Sincronizar cuotas
-        sport_key = options['sport']
+        sport_key = options['sport'] or settings.SPORT_KEY
         self.stdout.write(f'📈 Sincronizando cuotas para {sport_key}...')
         
         start_time = timezone.now()

@@ -1104,40 +1104,117 @@ class MarketsView(View):
 def _get_upcoming_matches_filtered():
     """Obtiene y filtra partidos próximos de todas las ligas disponibles"""
     from odds.services import OddsAPIService
+    import logging
     
-    odds_service = OddsAPIService()
-    league_to_sport_key = {
-        'premier league': 'soccer_epl',
-        'la liga': 'soccer_spain_la_liga',
-        'serie a': 'soccer_italy_serie_a',
-        'bundesliga': 'soccer_germany_bundesliga',
-        'ligue 1': 'soccer_france_ligue_one',
-        'ligue one': 'soccer_france_ligue_one',
-        'eredivisie': 'soccer_netherlands_eredivisie',
-        'primeira liga': 'soccer_portugal_primeira_liga',
-        'super lig': 'soccer_turkey_super_league',
-        'super league': 'soccer_china_superleague',
-        'a-league': 'soccer_australia_aleague',
-        'champions league': 'soccer_uefa_champs_league',
-    }
+    logger = logging.getLogger('football_data')
     
-    sport_keys_to_fetch = set()
-    for db_league in League.objects.all():
-        name_norm = (db_league.name or '').lower()
-        for alias, s_key in league_to_sport_key.items():
-            if alias in name_norm:
-                sport_keys_to_fetch.add(s_key)
-    if not sport_keys_to_fetch:
-        sport_keys_to_fetch.add('soccer_epl')
+    try:
+        odds_service = OddsAPIService()
+        league_to_sport_key = {
+            'premier league': 'soccer_epl',
+            'la liga': 'soccer_spain_la_liga',
+            'serie a': 'soccer_italy_serie_a',
+            'bundesliga': 'soccer_germany_bundesliga',
+            'ligue 1': 'soccer_france_ligue_one',
+            'ligue one': 'soccer_france_ligue_one',
+            'eredivisie': 'soccer_netherlands_eredivisie',
+            'primeira liga': 'soccer_portugal_primeira_liga',
+            'super lig': 'soccer_turkey_super_league',
+            'super league': 'soccer_china_superleague',
+            'a-league': 'soccer_australia_aleague',
+            'champions league': 'soccer_uefa_champs_league',
+        }
+        
+        sport_keys_to_fetch = set()
+        leagues_count = League.objects.count()
+        logger.info(f"Buscando partidos para {leagues_count} ligas en la base de datos")
+        
+        # Mapeo inverso mejorado: mapea nombres de liga comunes a sport_keys
+        # Esto incluye variaciones comunes de nombres
+        improved_league_mapping = {
+            # Premier League
+            'premier league': 'soccer_epl',
+            'epl': 'soccer_epl',
+            'english premier': 'soccer_epl',
+            # La Liga
+            'la liga': 'soccer_spain_la_liga',
+            'liga española': 'soccer_spain_la_liga',
+            'spanish la liga': 'soccer_spain_la_liga',
+            'primera division': 'soccer_spain_la_liga',
+            # Serie A
+            'serie a': 'soccer_italy_serie_a',
+            'calcio': 'soccer_italy_serie_a',
+            'italian serie': 'soccer_italy_serie_a',
+            # Bundesliga
+            'bundesliga': 'soccer_germany_bundesliga',
+            'german bundesliga': 'soccer_germany_bundesliga',
+            '1. bundesliga': 'soccer_germany_bundesliga',
+            # Ligue 1
+            'ligue 1': 'soccer_france_ligue_one',
+            'ligue one': 'soccer_france_ligue_one',
+            'french ligue': 'soccer_france_ligue_one',
+            # Eredivisie
+            'eredivisie': 'soccer_netherlands_eredivisie',
+            'dutch eredivisie': 'soccer_netherlands_eredivisie',
+            # Primeira Liga
+            'primeira liga': 'soccer_portugal_primeira_liga',
+            'portuguese primeira': 'soccer_portugal_primeira_liga',
+            # Super Lig
+            'super lig': 'soccer_turkey_super_league',
+            'süper lig': 'soccer_turkey_super_league',
+            'turkish super': 'soccer_turkey_super_league',
+            # Champions League
+            'champions league': 'soccer_uefa_champs_league',
+            'uefa champions': 'soccer_uefa_champs_league',
+        }
+        
+        for db_league in League.objects.all():
+            name_norm = (db_league.name or '').lower().strip()
+            matched = False
+            
+            # Intentar matching mejorado
+            for alias, s_key in improved_league_mapping.items():
+                if alias in name_norm:
+                    sport_keys_to_fetch.add(s_key)
+                    logger.info(f"✓ Liga '{db_league.name}' mapeada a '{s_key}' (match: '{alias}')")
+                    matched = True
+                    break
+            
+            # Si no se encontró con el mapeo mejorado, intentar el mapeo original
+            if not matched:
+                for alias, s_key in league_to_sport_key.items():
+                    if alias in name_norm:
+                        sport_keys_to_fetch.add(s_key)
+                        logger.info(f"✓ Liga '{db_league.name}' mapeada a '{s_key}' (match original: '{alias}')")
+                        matched = True
+                        break
+            
+            if not matched:
+                logger.warning(f"⚠ Liga '{db_league.name}' NO se pudo mapear a ningún sport_key")
+        
+        if not sport_keys_to_fetch:
+            logger.warning("No se encontraron ligas mapeadas, usando 'soccer_epl' por defecto")
+            sport_keys_to_fetch.add('soccer_epl')
+        
+        logger.info(f"Consultando partidos para {len(sport_keys_to_fetch)} deportes: {sport_keys_to_fetch}")
+        
+        upcoming_matches = []
+        for s_key in sport_keys_to_fetch:
+            try:
+                logger.debug(f"Consultando partidos para {s_key}...")
+                matches = odds_service.get_upcoming_matches(sport_key=s_key)
+                if matches:
+                    logger.info(f"Obtenidos {len(matches)} partidos para {s_key}")
+                    upcoming_matches.extend(matches)
+                else:
+                    logger.warning(f"No se obtuvieron partidos para {s_key}")
+            except Exception as e:
+                logger.error(f"Error obteniendo partidos para {s_key}: {e}", exc_info=True)
+                continue
+    except Exception as e:
+        logger.error(f"Error en _get_upcoming_matches_filtered: {e}", exc_info=True)
+        return []
     
-    upcoming_matches = []
-    for s_key in sport_keys_to_fetch:
-        try:
-            matches = odds_service.get_upcoming_matches(sport_key=s_key)
-            if matches:
-                upcoming_matches.extend(matches)
-        except Exception:
-            continue
     
     # Filtrar por tiempo
     from datetime import timezone as dt_timezone
@@ -1147,10 +1224,21 @@ def _get_upcoming_matches_filtered():
     else:
         now = now.astimezone(dt_timezone.utc)
     
+    logger.info(f"Total partidos obtenidos de API: {len(upcoming_matches)}")
+    logger.info(f"Hora actual (UTC): {now}")
+    
     filtered_matches = []
+    matches_filtered_out = {
+        'no_commence_time': 0,
+        'time_out_of_range': 0,
+        'missing_teams': 0,
+        'parse_error': 0
+    }
+    
     for match_data in upcoming_matches:
         commence_time_str = match_data.get('commence_time', '')
         if not commence_time_str:
+            matches_filtered_out['no_commence_time'] += 1
             continue
         
         try:
@@ -1161,27 +1249,43 @@ def _get_upcoming_matches_filtered():
                 commence_time = commence_time.astimezone(dt_timezone.utc)
             
             time_diff = (commence_time - now).total_seconds() / 3600
-            if time_diff < -2 or time_diff > 36:
+            
+            # Filtrar: partidos entre -2 horas (ya empezaron) y +48 horas (próximos 48 horas)
+            if time_diff < -2 or time_diff > 48:
+                matches_filtered_out['time_out_of_range'] += 1
+                logger.debug(f"Partido fuera de rango: {match_data.get('home_team')} vs {match_data.get('away_team')}, diff={time_diff:.1f}h")
                 continue
             
-            if not match_data.get('home_team') or not match_data.get('away_team'):
+            home_team = match_data.get('home_team', '')
+            away_team = match_data.get('away_team', '')
+            if not home_team or not away_team:
+                matches_filtered_out['missing_teams'] += 1
                 continue
             
             filtered_matches.append(match_data)
-        except Exception:
+        except Exception as e:
+            matches_filtered_out['parse_error'] += 1
+            logger.warning(f"Error parseando partido: {e}, datos: {match_data.get('home_team', 'N/A')} vs {match_data.get('away_team', 'N/A')}")
             continue
+    
+    logger.info(f"Partidos filtrados - Total: {len(filtered_matches)}, "
+                f"Sin hora: {matches_filtered_out['no_commence_time']}, "
+                f"Fuera de rango: {matches_filtered_out['time_out_of_range']}, "
+                f"Sin equipos: {matches_filtered_out['missing_teams']}, "
+                f"Error parseo: {matches_filtered_out['parse_error']}")
     
     return filtered_matches
 
 
 def _process_match_with_predictions(match_data):
-    """Procesa un partido individual y devuelve sus predicciones"""
-    from ai_predictions.enhanced_both_teams_score import enhanced_both_teams_score_model
-    from ai_predictions.simple_models import SimplePredictionService
+    """Procesa un partido individual y devuelve sus predicciones
+    Usa EXACTAMENTE el mismo flujo y funciones que 'result' (process_predictions_background)
+    para garantizar consistencia total en los cálculos.
+    """
+    # Imports necesarios - mismos que process_predictions_background
     from ai_predictions.official_prediction_model import official_prediction_model
     from ai_predictions.shots_prediction_model import shots_prediction_model
     from ai_predictions.xg_shots_model import xg_shots_model
-    from ai_predictions.simple_models import ModeloHibridoCorners, ModeloHibridoGeneral
     
     try:
         from datetime import timezone as dt_timezone
@@ -1230,12 +1334,134 @@ def _process_match_with_predictions(match_data):
         if sport_title:
             search_names.append(sport_title)
         
+        # Obtener logger para usar en las funciones helper
+        import logging
+        logger = logging.getLogger('football_data')
+        
+        # Función helper para normalizar nombres de ligas
+        def normalize_league_name(name):
+            """Normaliza el nombre de una liga para búsqueda flexible"""
+            if not name:
+                return ""
+            # Convertir a minúsculas y remover caracteres especiales
+            normalized = name.lower().strip()
+            
+            # Remover sufijos de países comunes (ej: "Bundesliga - Germany" -> "Bundesliga")
+            country_suffixes = [
+                ' - germany', ' - spain', ' - italy', ' - england', ' - france',
+                ' - portugal', ' - turkey', ' - netherlands', ' - belgium',
+                ' - china', ' - australia', ' - argentina',
+                '- germany', '- spain', '- italy', '- england', '- france',
+                '- portugal', '- turkey', '- netherlands', '- belgium',
+                '- china', '- australia', '- argentina'
+            ]
+            for suffix in country_suffixes:
+                if normalized.endswith(suffix):
+                    normalized = normalized[:-len(suffix)].strip()
+            
+            # Remover prefijos comunes de idiomas/países
+            prefixes_to_remove = [
+                'english', 'spanish', 'italian', 'german', 'french',
+                'portuguese', 'turkish', 'dutch', 'belgian', 'chinese',
+                'australian', 'argentine', 'argentinian',
+                'eng', 'esp', 'ita', 'ger', 'fra', 'por', 'tur', 'ned', 'bel', 'chn', 'aus', 'arg'
+            ]
+            for prefix in prefixes_to_remove:
+                if normalized.startswith(prefix + ' '):
+                    normalized = normalized[len(prefix) + 1:]
+                if normalized.endswith(' ' + prefix):
+                    normalized = normalized[:-(len(prefix) + 1)]
+            
+            # Remover espacios extra
+            normalized = ' '.join(normalized.split())
+            return normalized
+        
+        # Función helper para buscar liga con matching inteligente
+        def find_league_smart(search_name):
+            """Busca liga usando matching inteligente"""
+            if not search_name:
+                return None
+            
+            normalized_search = normalize_league_name(search_name)
+            search_words = set(normalized_search.split())
+            
+            logger.debug(f"    Buscando liga: '{search_name}' -> normalizado: '{normalized_search}' -> palabras: {search_words}")
+            
+            # Obtener todas las ligas y hacer matching más inteligente
+            all_leagues = League.objects.all()
+            best_match = None
+            best_score = 0
+            
+            for candidate_league in all_leagues:
+                normalized_candidate = normalize_league_name(candidate_league.name)
+                candidate_words = set(normalized_candidate.split())
+                
+                # Calcular similitud: palabras en común
+                common_words = search_words.intersection(candidate_words)
+                if not common_words:
+                    continue
+                
+                logger.debug(f"      Comparando con '{candidate_league.name}' (normalizado: '{normalized_candidate}') -> palabras comunes: {common_words}")
+                
+                # Calcular score de similitud
+                # 1. Coincidencia exacta de nombre normalizado
+                if normalized_search == normalized_candidate:
+                    logger.debug(f"      ✓ Coincidencia EXACTA encontrada!")
+                    return candidate_league
+                
+                # 2. Todas las palabras principales están presentes
+                important_words = {w for w in search_words if len(w) > 3}  # Palabras importantes (>3 letras)
+                if important_words and important_words.issubset(candidate_words):
+                    score = len(common_words) * 2
+                    logger.debug(f"      ✓ Todas las palabras importantes presentes, score: {score}")
+                    if score > best_score:
+                        best_match = candidate_league
+                        best_score = score
+                    continue
+                
+                # 3. Coincidencia parcial de palabras clave
+                score = len(common_words)
+                # Bonus si contiene palabras clave importantes
+                key_words = {'league', 'ligue', 'liga', 'serie', 'premier', 'bundesliga', 
+                            'eredivisie', 'champions', 'super', 'division', 'primera'}
+                matching_keywords = [kw for kw in key_words if kw in normalized_search and kw in normalized_candidate]
+                if matching_keywords:
+                    score += len(matching_keywords) * 2
+                    logger.debug(f"      ✓ Palabras clave coinciden: {matching_keywords}, score: {score}")
+                
+                if score > best_score:
+                    best_match = candidate_league
+                    best_score = score
+                    logger.debug(f"      Nuevo mejor match con score {score}")
+            
+            # Si el score es razonable (al menos 1 palabra clave o 2 palabras coinciden), usar ese match
+            if best_score >= 1:
+                logger.debug(f"    Match encontrado con score {best_score}: '{best_match.name if best_match else None}'")
+                return best_match
+            
+            # Último intento: búsqueda simple con icontains
+            logger.debug(f"    Intentando búsqueda simple icontains con: '{search_name}'")
+            simple_match = League.objects.filter(name__icontains=search_name).first()
+            if simple_match:
+                logger.debug(f"    Match simple encontrado: '{simple_match.name}'")
+            return simple_match
+        
+        # Buscar liga usando matching inteligente
+        logger.debug(f"Buscando liga para {home_team} vs {away_team}")
+        logger.debug(f"  sport_key: {sport_key}")
+        logger.debug(f"  sport_title: {sport_title}")
+        logger.debug(f"  search_names: {search_names}")
+        
         for search_name in search_names:
-            league = League.objects.filter(name__icontains=search_name).first()
+            league = find_league_smart(search_name)
             if league:
+                logger.info(f"✓ Liga encontrada: '{league.name}' (buscado: '{search_name}', sport_key: {sport_key})")
                 break
+            else:
+                logger.debug(f"  No se encontró liga con: '{search_name}'")
         
         if not league:
+            # Intentar buscar por equipos en la base de datos
             league_ids = list(
                 Match.objects.filter(Q(home_team__iexact=home_team) | Q(away_team__iexact=home_team))
                 .values_list('league_id', flat=True)[:1]
@@ -1248,25 +1474,61 @@ def _process_match_with_predictions(match_data):
             if league_ids:
                 league = League.objects.filter(id=league_ids[0]).first()
         
+        # Si aún no se encuentra la liga, NO crear automáticamente - solo buscar
         if not league:
+            import logging
+            logger = logging.getLogger('football_data')
+            
+            # Intentar buscar una liga similar usando el mapeo
+            league_name = league_mapping.get(sport_key, sport_title or 'Unknown League')
+            
+            # Buscar si existe una liga similar usando matching inteligente
+            league = find_league_smart(league_name)
+            
+            if league:
+                logger.debug(f"Liga encontrada por búsqueda inteligente: {league.name} (buscado: '{league_name}')")
+        
+        # Si aún no hay liga, retornar None - NO crear liga automáticamente
+        if not league:
+            import logging
+            logger = logging.getLogger('football_data')
+            league_name_from_mapping = league_mapping.get(sport_key, sport_title or 'Unknown')
+            logger.warning(f"❌ Partido DESCARTADO: No se encontró liga en BD")
+            logger.warning(f"   Partido: {home_team} vs {away_team}")
+            logger.warning(f"   sport_key: {sport_key}")
+            logger.warning(f"   sport_title: {sport_title}")
+            logger.warning(f"   Liga buscada: {league_name_from_mapping}")
+            logger.warning(f"   Ligas disponibles en BD: {list(League.objects.values_list('name', flat=True))[:10]}")
+            logger.warning(f"   Solo se procesan partidos de ligas existentes en la base de datos.")
             return None
         
+        # USAR EXACTAMENTE EL MISMO FLUJO QUE "result" (process_predictions_background)
+        # Reutilizar la función exacta de ai_predictions/views.py
+        # Importar y llamar a una función helper que replicará EXACTAMENTE process_predictions_background
+        from ai_predictions.simple_models import SimplePredictionService, ModeloHibridoCorners, ModeloHibridoGeneral
+        from ai_predictions.enhanced_both_teams_score import enhanced_both_teams_score_model
+        
         prediction_types = [
-            'shots_total', 'shots_home', 'shots_away', 'shots_on_target_total',
+            'shots_total', 'shots_home', 'shots_away',
+            'shots_on_target_total',
             'goals_total', 'goals_home', 'goals_away',
             'corners_total', 'corners_home', 'corners_away',
             'both_teams_score'
         ]
         
-        simple_service = SimplePredictionService()
         all_predictions_by_type = {}
+        simple_service = SimplePredictionService()
         
+        # COPIAR EXACTAMENTE la lógica de process_predictions_background (líneas 91-267)
+        # Esta es la MISMA lógica que usa "result"
         for pred_type in prediction_types:
             try:
                 predictions = []
                 
-                if 'shots' in pred_type:
+                # MANEJO ESPECIAL PARA REMATES - USAR AMBOS MODELOS (igual que result, líneas 119-170)
+                if 'shots' in pred_type or 'remates' in pred_type:
                     try:
+                        # Modelo 1: Shots Prediction Model (original) - línea 125-141
                         if pred_type == 'shots_total':
                             pred1 = shots_prediction_model.predict_shots_total(home_team, away_team, league)
                         elif pred_type == 'shots_home':
@@ -1277,12 +1539,14 @@ def _process_match_with_predictions(match_data):
                             pred1 = shots_prediction_model.predict_shots_on_target_total(home_team, away_team, league)
                         else:
                             pred1 = None
+                        
                         if pred1:
                             predictions.append(pred1)
                     except Exception:
                         pass
                     
                     try:
+                        # Modelo 2: XG Shots Model (nuevo) - línea 147-164
                         if pred_type == 'shots_total':
                             pred2 = xg_shots_model.predict_shots_total(home_team, away_team, league)
                         elif pred_type == 'shots_home':
@@ -1293,24 +1557,22 @@ def _process_match_with_predictions(match_data):
                             pred2 = xg_shots_model.predict_shots_on_target_total(home_team, away_team, league)
                         else:
                             pred2 = None
+                        
                         if pred2:
                             predictions.append(pred2)
                     except Exception:
                         pass
                 else:
+                    # Línea 173: get_all_simple_predictions
                     try:
-                        simple_predictions = simple_service.get_all_simple_predictions(
-                            home_team, away_team, league, pred_type
-                        )
-                        predictions.extend(simple_predictions)
+                        predictions = simple_service.get_all_simple_predictions(home_team, away_team, league, pred_type)
                     except Exception:
-                        pass
+                        predictions = []
                 
+                # Manejo específico para "both_teams_score" con modelo mejorado (líneas 190-216)
                 if pred_type == 'both_teams_score':
                     try:
-                        enhanced_prob = enhanced_both_teams_score_model.predict(
-                            home_team, away_team, league
-                        )
+                        enhanced_prob = enhanced_both_teams_score_model.predict(home_team, away_team, league)
                         enhanced_prediction = {
                             'model_name': 'Enhanced Both Teams Score',
                             'prediction': enhanced_prob,
@@ -1320,31 +1582,116 @@ def _process_match_with_predictions(match_data):
                         }
                         predictions.append(enhanced_prediction)
                     except Exception:
-                        pass
+                        # Fallback específico para ambos marcan (línea 207-216)
+                        fallback_prob = 0.45
+                        enhanced_fallback = {
+                            'model_name': 'Enhanced Both Teams Score (Fallback)',
+                            'prediction': fallback_prob,
+                            'confidence': 0.60,
+                            'probabilities': {'both_score': fallback_prob},
+                            'total_matches': 0
+                        }
+                        predictions.append(enhanced_fallback)
                 
+                # Agregar modelo híbrido como modelo adicional (líneas 218-258)
+                # CRÍTICO: En process_predictions_background, el elif/else está AL MISMO NIVEL que el if shots
+                # Pero en Python, elif se conecta al if más cercano. Sin embargo, los logs muestran que
+                # el Modelo Híbrido General SÍ se agrega para both_teams_score. Esto significa que
+                # el elif/else debe ejecutarse INDEPENDIENTEMENTE, no como parte del if both_teams_score.
+                # SOLUCIÓN: Cambiar elif por if para que sea un bloque independiente, y luego usar else
                 if 'corners' in pred_type:
                     try:
                         hybrid_model = ModeloHibridoCorners()
                         hybrid_prediction = hybrid_model.predecir(home_team, away_team, league, pred_type)
                         predictions.append(hybrid_prediction)
                     except Exception:
-                        pass
-                elif 'shots' not in pred_type and 'both_teams_score' not in pred_type:
+                        # Fallback híbrido corners (línea 229-237)
+                        hybrid_fallback = {
+                            'model_name': 'Modelo Híbrido Corners',
+                            'prediction': 10.0,
+                            'confidence': 0.6,
+                            'probabilities': {'over_10': 0.5, 'over_15': 0.3, 'over_20': 0.1},
+                            'total_matches': 0,
+                            'component_predictions': {}
+                        }
+                        predictions.append(hybrid_fallback)
+                else:
+                    # Modelo Híbrido General (línea 240-258)
                     try:
                         hybrid_model = ModeloHibridoGeneral()
                         hybrid_prediction = hybrid_model.predecir(home_team, away_team, league, pred_type)
                         predictions.append(hybrid_prediction)
                     except Exception:
-                        pass
+                        # Fallback híbrido general (línea 249-257)
+                        hybrid_fallback = {
+                            'model_name': 'Modelo Híbrido General',
+                            'prediction': 10.0,
+                            'confidence': 0.6,
+                            'probabilities': {'over_10': 0.5, 'over_15': 0.3, 'over_20': 0.1},
+                            'total_matches': 0,
+                            'component_predictions': {}
+                        }
+                        predictions.append(hybrid_fallback)
                 
                 all_predictions_by_type[pred_type] = predictions
             except Exception:
                 all_predictions_by_type[pred_type] = []
         
-        official_predictions = official_prediction_model.calculate_official_predictions(all_predictions_by_type)
+        # AGREGAR PREDICCIÓN OFICIAL (línea 273 de process_predictions_background)
+        all_predictions_by_type = official_prediction_model.add_to_predictions(all_predictions_by_type)
         
+        # DEBUG: Log todas las predicciones de both_teams_score
+        if 'both_teams_score' in all_predictions_by_type:
+            logger.info(f"🔍 ANALYSIS DEBUG - {home_team} vs {away_team}:")
+            logger.info(f"   Total predicciones both_teams_score: {len(all_predictions_by_type['both_teams_score'])}")
+            for idx, pred in enumerate(all_predictions_by_type['both_teams_score']):
+                model_name = pred.get('model_name', 'Unknown')
+                prediction_val = pred.get('prediction')
+                probabilities = pred.get('probabilities', {})
+                both_score_prob = probabilities.get('both_score')
+                logger.info(f"   [{idx}] model_name='{model_name}', prediction={prediction_val}, probabilities.both_score={both_score_prob}")
+        
+        # Extraer el valor de "Predicción Oficial" EXACTAMENTE como lo hace el template "result"
+        # El template busca: pred.model_name == "Predicción Oficial" y usa pred.probabilities.both_score
+        both_teams_score_value = None
+        both_teams_score_pct = None
+        
+        if 'both_teams_score' in all_predictions_by_type:
+            both_teams_score_predictions = all_predictions_by_type['both_teams_score']
+            # Buscar la "Predicción Oficial" (igual que el template)
+            for pred in both_teams_score_predictions:
+                model_name = pred.get('model_name', '')
+                if model_name == 'Predicción Oficial':
+                    # Usar probabilities.both_score (igual que el template línea 397)
+                    probabilities = pred.get('probabilities', {})
+                    both_teams_score_value = probabilities.get('both_score')
+                    if both_teams_score_value is not None:
+                        # Convertir a porcentaje (igual que el template JavaScript línea 464)
+                        both_teams_score_pct = both_teams_score_value * 100
+                        logger.info(f"✓ ANALYSIS - Encontrado 'Predicción Oficial': both_score={both_teams_score_value} -> {both_teams_score_pct}%")
+                        break
+                    else:
+                        logger.warning(f"⚠ ANALYSIS - 'Predicción Oficial' encontrada pero probabilities.both_score es None")
+                else:
+                    logger.debug(f"   Saltando modelo: '{model_name}' (no es 'Predicción Oficial')")
+        
+        # Fallback si no se encontró la predicción oficial
+        if both_teams_score_value is None or both_teams_score_pct is None:
+            logger.error(f"❌ ANALYSIS - No se encontró 'Predicción Oficial' para both_teams_score!")
+            logger.error(f"   Predicciones disponibles: {[p.get('model_name') for p in all_predictions_by_type.get('both_teams_score', [])]}")
+            both_teams_score_value = 0.5
+            both_teams_score_pct = 50.0
+        
+        # Construir match_predictions para compatibilidad con el resto del código
         match_predictions = {}
-        for pred_type, official_pred in official_predictions.items():
+        for pred_type, predictions_list in all_predictions_by_type.items():
+            # Buscar la "Predicción Oficial" para cada tipo
+            official_pred = None
+            for pred in predictions_list:
+                if pred.get('model_name') == 'Predicción Oficial':
+                    official_pred = pred
+                    break
+            
             if official_pred and 'prediction' in official_pred:
                 match_predictions[pred_type] = {
                     'prediction': official_pred['prediction'],
@@ -1353,7 +1700,13 @@ def _process_match_with_predictions(match_data):
                     'total_matches': official_pred.get('total_matches', 0),
                 }
         
-        both_teams_score_pct = match_predictions.get('both_teams_score', {}).get('prediction', 0.5) * 100
+        # VERIFICAR que estamos usando el valor correcto
+        if both_teams_score_pct is None:
+            logger.error(f"❌ ANALYSIS - both_teams_score_pct es None! Usando fallback")
+            both_teams_score_pct = 50.0
+            both_teams_score_value = 0.5
+        
+        logger.info(f"📊 ANALYSIS FINAL - {home_team} vs {away_team}: both_teams_score_pct={both_teams_score_pct}%, both_teams_score_value={both_teams_score_value}")
         
         return {
             'league': league.name,
@@ -1361,8 +1714,8 @@ def _process_match_with_predictions(match_data):
             'away_team': away_team,
             'date': colombia_time.strftime('%d/%m/%Y'),
             'time': colombia_time.strftime('%H:%M'),
-            'prediction': both_teams_score_pct,
-            'probability': match_predictions.get('both_teams_score', {}).get('prediction', 0.5),
+            'prediction': both_teams_score_pct,  # Porcentaje (0-100)
+            'probability': both_teams_score_value,  # Probabilidad (0.0-1.0)
             'predictions': match_predictions,
         }
     except Exception as e:
@@ -1389,29 +1742,104 @@ class AnalysisAjaxView(View):
     
     def get(self, request):
         import json
-        offset = int(request.GET.get('offset', 0))
-        batch_size = int(request.GET.get('batch_size', 3))  # Procesar 3 partidos por lote
+        import logging
+        import time
         
-        # Obtener todos los partidos filtrados
-        all_matches = _get_upcoming_matches_filtered()
+        logger = logging.getLogger('football_data')
+        start_time = time.time()
         
-        # Obtener lote actual
-        batch_matches = all_matches[offset:offset + batch_size]
-        
-        processed_matches = []
-        for match_data in batch_matches:
-            result = _process_match_with_predictions(match_data)
-            if result:
-                processed_matches.append(result)
-        
-        # Verificar si hay más partidos
-        has_more = (offset + batch_size) < len(all_matches)
-        
-        return JsonResponse({
-            'success': True,
-            'matches': processed_matches,
-            'offset': offset,
-            'total': len(all_matches),
-            'has_more': has_more,
-            'processed_count': len(processed_matches),
-        })
+        try:
+            offset = int(request.GET.get('offset', 0))
+            batch_size = int(request.GET.get('batch_size', 3))  # Procesar 3 partidos por lote
+            
+            logger.info(f"AnalysisAjaxView: offset={offset}, batch_size={batch_size}")
+            
+            # Obtener todos los partidos filtrados
+            all_matches = _get_upcoming_matches_filtered()
+            
+            logger.info(f"Total partidos disponibles: {len(all_matches)}")
+            
+            # Obtener lote actual
+            batch_matches = all_matches[offset:offset + batch_size]
+            
+            logger.info(f"Procesando lote: {len(batch_matches)} partidos (offset={offset})")
+            
+            processed_matches = []
+            discarded_count = 0
+            
+            for i, match_data in enumerate(batch_matches):
+                try:
+                    home_team = match_data.get('home_team', 'N/A')
+                    away_team = match_data.get('away_team', 'N/A')
+                    logger.debug(f"Procesando partido {i+1}/{len(batch_matches)}: {home_team} vs {away_team}")
+                    result = _process_match_with_predictions(match_data)
+                    if result:
+                        processed_matches.append(result)
+                        logger.info(f"✓ Partido procesado exitosamente: {home_team} vs {away_team}")
+                    else:
+                        discarded_count += 1
+                        logger.warning(f"✗ Partido descartado (no procesado): {home_team} vs {away_team}")
+                except Exception as e:
+                    discarded_count += 1
+                    logger.error(f"❌ Error procesando partido {i+1}: {e}", exc_info=True)
+                    continue
+            
+            if discarded_count > 0:
+                logger.warning(f"⚠ De {len(batch_matches)} partidos, {discarded_count} fueron descartados")
+            
+            # Calcular el nuevo offset: avanzar según los partidos intentados (no los procesados)
+            # Esto es crítico: si descartamos partidos, el offset debe avanzar igualmente
+            actual_processed = len(batch_matches)  # Partidos intentados en este batch
+            new_offset = offset + actual_processed
+            
+            # Verificar si hay más partidos
+            has_more = new_offset < len(all_matches)
+            
+            elapsed_time = time.time() - start_time
+            logger.info(f"Respuesta: {len(processed_matches)} partidos procesados de {actual_processed} intentados, "
+                       f"has_more={has_more}, total={len(all_matches)}, nuevo_offset={new_offset}, tiempo={elapsed_time:.2f}s")
+            
+            # Verificar que los matches sean serializables antes de enviar
+            try:
+                import json as json_module
+                json_test = json_module.dumps(processed_matches, default=str)
+                logger.debug(f"JSON serializable: OK ({len(json_test)} caracteres)")
+            except Exception as json_err:
+                logger.error(f"❌ Error serializando matches a JSON: {json_err}", exc_info=True)
+                # Intentar limpiar los matches de objetos no serializables
+                cleaned_matches = []
+                for match in processed_matches:
+                    cleaned_match = {}
+                    for key, value in match.items():
+                        try:
+                            json_module.dumps(value, default=str)
+                            cleaned_match[key] = value
+                        except:
+                            logger.warning(f"Campo '{key}' no serializable, convirtiendo a string")
+                            cleaned_match[key] = str(value) if value is not None else None
+                    cleaned_matches.append(cleaned_match)
+                processed_matches = cleaned_matches
+            
+            return JsonResponse({
+                'success': True,
+                'matches': processed_matches,
+                'offset': offset,
+                'new_offset': new_offset,  # Nuevo offset para el siguiente batch
+                'total': len(all_matches),
+                'has_more': has_more,
+                'processed_count': len(processed_matches),
+                'attempted_count': actual_processed,  # Partidos intentados en este batch
+            })
+        except Exception as e:
+            elapsed_time = time.time() - start_time
+            logger.error(f"❌ Error en AnalysisAjaxView (tiempo: {elapsed_time:.2f}s): {e}", exc_info=True)
+            current_offset = offset if 'offset' in locals() else 0
+            return JsonResponse({
+                'success': False,
+                'error': str(e),
+                'matches': [],
+                'offset': current_offset,
+                'total': 0,
+                'has_more': False,
+                'processed_count': 0,
+            }, status=500)

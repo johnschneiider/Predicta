@@ -59,6 +59,8 @@ media/
 # Database
 *.db
 *.sqlite3
+*.sqlite
+nba.sqlite
 
 # Logs
 logs/

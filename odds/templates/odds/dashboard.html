@@ -3,187 +3,195 @@
 {% block title %}Dashboard - Bot de Apuestas{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1><i class="fas fa-tachometer-alt"></i> Dashboard de Cuotas</h1>
-            <div class="btn-group">
-                <a href="{% url 'odds:upcoming_matches' %}" class="btn btn-success">
-                    <i class="fas fa-calendar-alt"></i> Próximos Partidos
-                </a>
-                <button id="syncBtn" class="btn btn-primary" onclick="syncOdds()">
-                    <i class="fas fa-sync-alt"></i> Sincronizar Cuotas
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Estadísticas -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card stats-card">
-            <div class="card-body text-center">
-                <i class="fas fa-futbol fa-2x mb-2"></i>
-                <h3>{{ total_matches }}</h3>
-                <p class="mb-0">Partidos Totales</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card stats-card">
-            <div class="card-body text-center">
-                <i class="fas fa-chart-line fa-2x mb-2"></i>
-                <h3>{{ total_odds }}</h3>
-                <p class="mb-0">Cuotas Registradas</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card stats-card">
-            <div class="card-body text-center">
-                <i class="fas fa-percentage fa-2x mb-2"></i>
-                <h3>{{ recent_opportunities }}</h3>
-                <p class="mb-0">Oportunidades Recientes</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card stats-card">
-            <div class="card-body text-center">
-                <i class="fas fa-clock fa-2x mb-2"></i>
-                <h3 id="currentTime">--:--:--</h3>
-                <p class="mb-0">Hora Actual</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Deportes Disponibles -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="fas fa-list"></i> Deportes Disponibles</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    {% for sport in sports %}
-                    <div class="col-md-3 mb-2">
-                        <a href="{% url 'odds:matches_list' %}?sport={{ sport.key }}" class="btn btn-outline-primary btn-sm w-100">
-                            <i class="fas fa-futbol"></i> {{ sport.title }}
-                        </a>
-                    </div>
-                    {% empty %}
-                    <div class="col-12">
-                        <p class="text-muted">No hay deportes disponibles. <a href="#" onclick="syncOdds()">Sincronizar deportes</a></p>
-                    </div>
-                    {% endfor %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="text-primary"><i class="fas fa-tachometer-alt"></i> Dashboard de Cuotas</h1>
+                <div class="btn-group">
+                    <a href="{% url 'odds:upcoming_matches' %}" class="btn btn-success">
+                        <i class="fas fa-calendar-alt"></i> Próximos Partidos
+                    </a>
+                    <button id="syncBtn" class="btn btn-primary" onclick="syncOdds()">
+                        <i class="fas fa-sync-alt"></i> Sincronizar Cuotas
+                    </button>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Partidos Recientes -->
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5><i class="fas fa-clock"></i> Partidos Recientes</h5>
-                <a href="{% url 'odds:matches_list' %}" class="btn btn-sm btn-outline-primary">Ver Todos</a>
+    <!-- Estadísticas -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-futbol fa-2x mb-2"></i>
+                    <h3>{{ total_matches }}</h3>
+                    <p class="mb-0">Partidos Totales</p>
+                </div>
             </div>
-            <div class="card-body">
-                {% if recent_matches %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Partido</th>
-                                    <th>Deporte</th>
-                                    <th>Fecha</th>
-                                    <th>Cuotas Promedio</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for match in recent_matches %}
-                                <tr>
-                                    <td>
-                                        <strong>{{ match.home_team }}</strong> vs <strong>{{ match.away_team }}</strong>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ match.sport.title }}</span>
-                                    </td>
-                                    <td>
-                                        {{ match.commence_time|date:"d/m/Y H:i" }}
-                                    </td>
-                                    <td>
-                                        {% with match.average_odds.first as avg_odds %}
-                                        {% if avg_odds %}
-                                            <div class="d-flex gap-2">
-                                                <span class="badge bg-primary">H: {{ avg_odds.avg_home_odds|floatformat:2 }}</span>
-                                                <span class="badge bg-warning">E: {{ avg_odds.avg_draw_odds|floatformat:2 }}</span>
-                                                <span class="badge bg-info">A: {{ avg_odds.avg_away_odds|floatformat:2 }}</span>
-                                            </div>
-                                        {% else %}
-                                            <span class="text-muted">Sin datos</span>
-                                        {% endif %}
-                                        {% endwith %}
-                                    </td>
-                                    <td>
-                                        <a href="{% url 'odds:match_detail' match.match_id %}" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-eye"></i> Ver Detalles
-                                        </a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-futbol fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">No hay partidos recientes disponibles.</p>
-                        <button class="btn btn-primary" onclick="syncOdds()">
-                            <i class="fas fa-sync-alt"></i> Sincronizar Partidos
-                        </button>
-                    </div>
-                {% endif %}
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line fa-2x mb-2"></i>
+                    <h3>{{ total_odds }}</h3>
+                    <p class="mb-0">Cuotas Registradas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-percentage fa-2x mb-2"></i>
+                    <h3>{{ recent_opportunities }}</h3>
+                    <p class="mb-0">Oportunidades Recientes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-2x mb-2"></i>
+                    <h3 id="currentTime">--:--:--</h3>
+                    <p class="mb-0">Hora Actual</p>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Acciones Rápidas -->
-<div class="row mt-4">
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body text-center">
-                <i class="fas fa-broadcast-tower fa-3x text-primary mb-3"></i>
-                <h5>Cuotas en Vivo</h5>
-                <p class="text-muted">Ver cuotas actualizadas en tiempo real</p>
-                <a href="{% url 'odds:live_odds' %}" class="btn btn-primary">Ver Cuotas</a>
+    <!-- Deportes Disponibles -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0 text-primary"><i class="fas fa-list"></i> Deportes Disponibles</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for sport in sports %}
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'odds:matches_list' %}?sport={{ sport.key }}" class="btn btn-outline-primary btn-sm w-100">
+                                <i class="fas fa-futbol"></i> {{ sport.title }}
+                            </a>
+                        </div>
+                        {% empty %}
+                        <div class="col-12">
+                            <p class="text-muted">No hay deportes disponibles. <a href="#" onclick="syncOdds()">Sincronizar deportes</a></p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body text-center">
-                <i class="fas fa-list fa-3x text-success mb-3"></i>
-                <h5>Todos los Partidos</h5>
-                <p class="text-muted">Explorar todos los partidos disponibles</p>
-                <a href="{% url 'odds:matches_list' %}" class="btn btn-success">Ver Partidos</a>
+
+    <!-- Partidos Recientes -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-primary"><i class="fas fa-clock"></i> Partidos Recientes</h5>
+                    <a href="{% url 'odds:matches_list' %}" class="btn btn-sm btn-outline-primary">Ver Todos</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_matches %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Partido</th>
+                                        <th>Deporte</th>
+                                        <th>Fecha</th>
+                                        <th>Cuotas Promedio</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for match in recent_matches %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ match.home_team }}</strong> vs <strong>{{ match.away_team }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ match.sport.title }}</span>
+                                        </td>
+                                        <td>
+                                            {{ match.commence_time|date:"d/m/Y H:i" }}
+                                        </td>
+                                        <td>
+                                            {% with match.average_odds.first as avg_odds %}
+                                            {% if avg_odds %}
+                                                <div class="d-flex gap-2">
+                                                    <span class="badge bg-primary">H: {{ avg_odds.avg_home_odds|floatformat:2 }}</span>
+                                                    <span class="badge bg-warning">E: {{ avg_odds.avg_draw_odds|floatformat:2 }}</span>
+                                                    <span class="badge bg-info">A: {{ avg_odds.avg_away_odds|floatformat:2 }}</span>
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted">Sin datos</span>
+                                            {% endif %}
+                                            {% endwith %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'odds:match_detail' match.match_id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> Ver Detalles
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-futbol fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No hay partidos recientes disponibles.</p>
+                            <button class="btn btn-primary" onclick="syncOdds()">
+                                <i class="fas fa-sync-alt"></i> Sincronizar Partidos
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body text-center">
-                <i class="fas fa-futbol fa-3x text-info mb-3"></i>
-                <h5>Deportes</h5>
-                <p class="text-muted">Ver todos los deportes disponibles</p>
-                <a href="{% url 'odds:sports_list' %}" class="btn btn-info">Ver Deportes</a>
+
+    <!-- Acciones Rápidas -->
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-broadcast-tower fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="text-primary">Cuotas en Vivo</h5>
+                    <p class="text-muted">Ver cuotas actualizadas en tiempo real</p>
+                    <a href="{% url 'odds:live_odds' %}" class="btn btn-primary">Ver Cuotas</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-list fa-3x text-success"></i>
+                    </div>
+                    <h5 class="text-success">Todos los Partidos</h5>
+                    <p class="text-muted">Explorar todos los partidos disponibles</p>
+                    <a href="{% url 'odds:matches_list' %}" class="btn btn-success">Ver Partidos</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-futbol fa-3x text-info"></i>
+                    </div>
+                    <h5 class="text-info">Deportes</h5>
+                    <p class="text-muted">Ver todos los deportes disponibles</p>
+                    <a href="{% url 'odds:sports_list' %}" class="btn btn-info">Ver Deportes</a>
+                </div>
             </div>
         </div>
     </div>

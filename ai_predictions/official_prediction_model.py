@@ -161,8 +161,11 @@ class OfficialPredictionModel:
                     
             elif 'both_teams_score' in pred_type:
                 # Probabilidades para ambos marcan (ya es probabilidad)
-                probabilities['both_score'] = round(prediction, 3)
-                probabilities['no_both_score'] = round(1.0 - prediction, 3)
+                # Usar el mismo valor redondeado que 'prediction' para consistencia
+                # IMPORTANTE: 'prediction' ya es una probabilidad (0.0-1.0), no un porcentaje
+                probabilities['both_score'] = round(prediction, 2)
+                probabilities['no_both_score'] = round(1.0 - prediction, 2)
+                logger.debug(f"🎯 OFICIAL PROB - both_teams_score: prediction={prediction:.4f}, both_score={probabilities['both_score']:.4f}")
                 
             return probabilities
             
@@ -206,3 +209,4 @@ class OfficialPredictionModel:
 
 # Instancia global del modelo
 official_prediction_model = OfficialPredictionModel()
+

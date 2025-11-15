@@ -31,6 +31,10 @@ class ArbitrageService:
     def __init__(self):
         self.odds_service = OddsAPIService()
         self.betfair_service = BetfairAPIService()
+        self.target_sport_keys = getattr(settings, 'TARGET_SPORT_KEYS', [])
+        self.target_competition_names = [
+            name.lower() for name in getattr(settings, 'BETFAIR_COMPETITION_NAMES', [])
+        ]
     
     def find_matching_events(self, odds_matches: List[Match], 
                            betfair_markets: List[BetfairMarket]) -> List[Tuple[Match, BetfairMarket]]:
@@ -44,6 +48,21 @@ class ArbitrageService:
         Returns:
             List[Tuple[Match, BetfairMarket]]: Pares de eventos coincidentes
         """
+        if self.target_sport_keys:
+            odds_matches = [
+                match for match in odds_matches
+                if getattr(match, 'sport', None) and match.sport.key in self.target_sport_keys
+            ]
+
+        if self.target_competition_names:
+            betfair_markets = [
+                market for market in betfair_markets
+                if any(
+                    target in (market.event.competition_name or '').lower()
+                    for target in self.target_competition_names
+                )
+            ]
+
         matches = []
         
         for odds_match in odds_matches:
@@ -341,10 +360,20 @@ class BettingService:
                 raise Exception("No se pudo conectar a Betfair")
             
             # Actualizar precios de mercados existentes
-            existing_markets = BetfairMarket.objects.filter(
+            existing_market_filters = Q(
                 event__event_type__event_type_id='1',
                 status='OPEN'
-            )[:20]  # Limitar a 20 mercados
+            )
+
+            if self.arbitrage_service.target_competition_names:
+                competition_query = Q()
+                for target in self.arbitrage_service.target_competition_names:
+                    competition_query |= Q(event__competition_name__icontains=target)
+                existing_market_filters &= competition_query
+
+            existing_markets = BetfairMarket.objects.filter(
+                existing_market_filters
+            ).select_related('event')[:self.betfair_service.max_markets]
             
             market_ids = [str(market.market_id) for market in existing_markets]
             if market_ids:
@@ -467,16 +496,34 @@ class BacktesterService:
         """
         try:
             # Obtener partidos recientes con cuotas promedio
-            recent_matches = Match.objects.filter(
-                average_odds__calculated_at__gte=django_timezone.now() - 
+            target_sports = self.arbitrage_service.target_sport_keys
+            target_competitions = self.arbitrage_service.target_competition_names
+
+            match_filters = Q(
+                average_odds__calculated_at__gte=django_timezone.now() -
                 django_timezone.timedelta(hours=1)
-            ).distinct()[:20]
+            )
+
+            if target_sports:
+                match_filters &= Q(sport__key__in=target_sports)
+
+            limit = self.betfair_service.max_markets
+
+            recent_matches = Match.objects.filter(match_filters).select_related('sport').distinct()[:limit]
             
             # Obtener mercados de Betfair activos
-            active_markets = BetfairMarket.objects.filter(
+            market_filters = Q(
                 status='OPEN',
                 event__event_type__event_type_id='1'
-            )[:20]
+            )
+
+            if target_competitions:
+                competition_query = Q()
+                for target in target_competitions:
+                    competition_query |= Q(event__competition_name__icontains=target)
+                market_filters &= competition_query
+
+            active_markets = BetfairMarket.objects.filter(market_filters).select_related('event')[:limit]
             
             opportunities = []
             

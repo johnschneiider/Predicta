@@ -158,10 +158,29 @@ BETFAIR_PASSWORD = os.getenv('BETFAIR_PASSWORD', 'your_betfair_password_here')
 BETFAIR_SANDBOX = os.getenv('BETFAIR_SANDBOX', 'True').lower() == 'true'
 
 # Configuración del bot
-SPORT_KEY = os.getenv('SPORT_KEY', 'soccer_epl')
+SPORT_KEY = os.getenv('SPORT_KEY', 'soccer_germany_bundesliga')
 REGIONS = os.getenv('REGIONS', 'uk,us,eu')
 MARKETS = os.getenv('MARKETS', 'h2h')
 ODDS_FORMAT = os.getenv('ODDS_FORMAT', 'decimal')
+
+# Ligas y competiciones objetivo
+TARGET_SPORT_KEYS = [
+    sport.strip() for sport in os.getenv('TARGET_SPORT_KEYS', SPORT_KEY).split(',')
+    if sport.strip()
+]
+BETFAIR_COMPETITION_IDS = [
+    comp.strip() for comp in os.getenv('BETFAIR_COMPETITION_IDS', '').split(',')
+    if comp.strip()
+]
+BETFAIR_COMPETITION_NAMES = [
+    name.strip() for name in os.getenv('BETFAIR_COMPETITION_NAMES', 'German Bundesliga').split(',')
+    if name.strip()
+]
+BETFAIR_MARKET_TYPES = [
+    market_type.strip() for market_type in os.getenv('BETFAIR_MARKET_TYPES', 'MATCH_ODDS').split(',')
+    if market_type.strip()
+]
+BETFAIR_MAX_MARKETS = int(os.getenv('BETFAIR_MAX_MARKETS', '30'))
 
 # Configuración de apuestas
 MIN_STAKE = float(os.getenv('MIN_STAKE', '1.0'))
@@ -170,6 +189,9 @@ MIN_EDGE = float(os.getenv('MIN_EDGE', '0.05'))
 
 # Intervalo de ejecución (segundos)
 EXECUTION_INTERVAL = int(os.getenv('EXECUTION_INTERVAL', '10'))
+
+# Configuración de evaluación de mercados
+MINIMUM_BOOKMAKER_COUNT = int(os.getenv('MINIMUM_BOOKMAKER_COUNT', '3'))
 
 # Configuración de logging
 LOGGING = {

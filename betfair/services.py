@@ -28,6 +28,12 @@ class BetfairAPIService:
         self.username = settings.BETFAIR_USERNAME
         self.password = settings.BETFAIR_PASSWORD
         self.sandbox = settings.BETFAIR_SANDBOX
+        self.target_competition_ids = getattr(settings, 'BETFAIR_COMPETITION_IDS', [])
+        self.target_competition_names = [
+            name.lower() for name in getattr(settings, 'BETFAIR_COMPETITION_NAMES', [])
+        ]
+        self.market_types = getattr(settings, 'BETFAIR_MARKET_TYPES', ['MATCH_ODDS'])
+        self.max_markets = getattr(settings, 'BETFAIR_MAX_MARKETS', 30)
         self.client = None
         self.session_token = None
         
@@ -139,22 +145,35 @@ class BetfairAPIService:
                 if not self.login():
                     return []
             
-            # Filtrar por fútbol (event_type_id = 1)
+            filter_kwargs = {
+                'event_type_ids': ['1']  # Fútbol
+            }
+
+            if self.target_competition_ids:
+                filter_kwargs['competition_ids'] = self.target_competition_ids
+
             events_response = self.client.betting.list_events(
-                filter=market_filter(
-                    event_type_ids=['1']  # Fútbol
-                )
+                filter=market_filter(**filter_kwargs)
             )
             
             events = []
             for event in events_response:
+                competition = getattr(event, 'competition', None)
+                competition_id = getattr(competition, 'id', '') if competition else ''
+                competition_name = getattr(competition, 'name', '') if competition else ''
+
+                if not self._is_target_competition(competition_id, competition_name):
+                    continue
+
                 events.append({
                     'id': event.event.id,
                     'name': event.event.name,
                     'country_code': event.event.country_code,
                     'timezone': event.event.timezone,
                     'open_date': event.event.open_date,
-                    'market_count': event.market_count
+                    'market_count': event.market_count,
+                    'competition_id': competition_id,
+                    'competition_name': competition_name
                 })
             
             logger.info(f"Eventos de fútbol disponibles: {len(events)}")
@@ -207,6 +226,8 @@ class BetfairAPIService:
                             'timezone': event_data.get('timezone', ''),
                             'open_date': open_date,
                             'market_count': event_data.get('market_count', 0),
+                            'competition_id': event_data.get('competition_id', ''),
+                            'competition_name': event_data.get('competition_name', ''),
                         }
                     )
                     if created:
@@ -233,23 +254,40 @@ class BetfairAPIService:
                     return []
             
             # Buscar mercados de Match Odds de fútbol
+            filter_kwargs = {
+                'event_type_ids': ['1'],  # Fútbol
+                'market_type_codes': self.market_types,
+                'in_play_only': False
+            }
+
+            if self.target_competition_ids:
+                filter_kwargs['competition_ids'] = self.target_competition_ids
+
             markets_response = self.client.betting.list_market_catalogue(
-                filter=market_filter(
-                    event_type_ids=['1'],  # Fútbol
-                    market_type_codes=['MATCH_ODDS'],  # Cuotas de partido
-                    in_play_only=False
-                ),
-                market_projection=['MARKET_DESCRIPTION', 'RUNNER_DESCRIPTION'],
-                max_results=50
+                filter=market_filter(**filter_kwargs),
+                market_projection=['MARKET_DESCRIPTION', 'RUNNER_DESCRIPTION', 'COMPETITION'],
+                max_results=self.max_markets
             )
             
             markets = []
             for market in markets_response:
+                competition = getattr(market, 'competition', None)
+                competition_id = getattr(competition, 'id', '') if competition else ''
+                competition_name = getattr(competition, 'name', '') if competition else ''
+
+                if not self._is_target_competition(competition_id, competition_name):
+                    continue
+
+                default_market_type = self.market_types[0] if self.market_types else 'MATCH_ODDS'
+
                 markets.append({
                     'market_id': market.market_id,
                     'market_name': market.market_name,
                     'event_name': market.event.name,
                     'event_id': market.event.id,
+                    'market_type': default_market_type,
+                    'competition_id': competition_id,
+                    'competition_name': competition_name,
                     'market_start_time': market.market_start_time,
                     'total_matched': market.total_matched,
                     'runners': [
@@ -371,6 +409,9 @@ class BetfairAPIService:
                         logger.warning(f"Evento {market_data['event_id']} no encontrado")
                         continue
                     
+                    if not self._is_target_competition(event.competition_id, event.competition_name):
+                        continue
+                    
                     # Convertir fecha
                     market_start_time = datetime.fromisoformat(
                         market_data['market_start_time'].replace('Z', '+00:00')
@@ -381,6 +422,7 @@ class BetfairAPIService:
                         defaults={
                             'event': event,
                             'market_name': market_data['market_name'],
+                            'market_type': market_data.get('market_type', 'MATCH_ODDS'),
                             'market_start_time': market_start_time,
                             'total_matched': market_data.get('total_matched', 0),
                             'status': 'OPEN'  # Asumir que está abierto
@@ -579,6 +621,26 @@ class BetfairAPIService:
             logger.error(f"Error obteniendo fondos de cuenta: {e}")
             return {}
     
+    def _is_target_competition(self, competition_id: str, competition_name: str) -> bool:
+        """
+        Determina si una competición cumple con los criterios configurados.
+        """
+        competition_name_lower = (competition_name or '').lower()
+
+        if self.target_competition_ids and competition_id:
+            if competition_id in self.target_competition_ids:
+                return True
+            if not self.target_competition_names:
+                return False
+
+        if self.target_competition_names and competition_name_lower:
+            for target_name in self.target_competition_names:
+                if target_name in competition_name_lower:
+                    return True
+            return False
+
+        return not self.target_competition_ids and not self.target_competition_names
+
     def logout(self):
         """Cierra la sesión"""
         if self.client:

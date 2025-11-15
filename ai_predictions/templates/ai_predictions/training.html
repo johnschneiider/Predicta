@@ -5,12 +5,12 @@
 {% block extra_css %}
 <style>
     .training-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: var(--azul-oscuro);
         border-radius: 20px;
         padding: 30px;
         color: white;
         margin-bottom: 30px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        box-shadow: 0 15px 35px rgba(10, 31, 68, 0.2);
     }
     
     .model-card {
@@ -53,11 +53,11 @@
     }
     
     .btn-train {
-        background: linear-gradient(45deg, #28a745, #20c997);
+        background: var(--verde-lima);
         border: none;
         border-radius: 25px;
         padding: 10px 25px;
-        color: white;
+        color: var(--azul-oscuro);
         font-weight: bold;
         text-transform: uppercase;
         letter-spacing: 1px;
@@ -65,9 +65,10 @@
     }
     
     .btn-train:hover {
+        background: #4AE64A;
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
-        color: white;
+        box-shadow: 0 8px 25px rgba(92, 255, 92, 0.3);
+        color: var(--azul-oscuro);
     }
     
     .loading-spinner {
@@ -92,13 +93,13 @@
     }
     
     .progress-bar {
-        background: linear-gradient(90deg, #28a745, #20c997);
+        background: var(--verde-lima);
         height: 100%;
         transition: width 0.3s ease;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
+        color: var(--azul-oscuro);
         font-weight: bold;
         position: relative;
         overflow: hidden;
@@ -164,7 +165,7 @@
                         <p class="mb-0 mt-2">Entrena modelos de IA para predicciones más precisas</p>
                     </div>
                     <div class="col-md-4 text-end">
-                        <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#trainModal">
+                        <button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#trainModal">
                             <i class="fas fa-plus"></i> Entrenar Nuevo Modelo
                         </button>
                     </div>

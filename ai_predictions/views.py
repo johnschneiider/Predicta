@@ -2,7 +2,7 @@
 Vistas para predicciones de IA
 """
 
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
@@ -16,9 +16,10 @@ import logging
 import threading
 from datetime import datetime, timedelta
 from collections import defaultdict
+from django.utils import timezone
 
 from football_data.models import League, Match
-from .models import PredictionModel, PredictionResult, TeamStats
+from .models import PredictionModel, PredictionResult, TeamStats, SavedPrediction
 from .services import PredictionService
 from .multi_models import MultiModelPredictionService
 from .advanced_models import AdvancedStatisticalModels
@@ -535,12 +536,27 @@ class PredictionFormView(View):
                     logger.error(f"❌ OFICIAL - Error agregando predicción oficial: {e}")
                     logger.error(f"❌ OFICIAL - Traceback:", exc_info=True)
                 
-                # Guardar resultados en sesión
+                # Guardar resultados persistidos para evitar pérdida en sesiones multi-worker
+                prediction_payload = convert_numpy_to_native(all_predictions_by_type)
+                saved_prediction = SavedPrediction.objects.create(
+                    user=request.user if request.user.is_authenticated else None,
+                    home_team=home_team,
+                    away_team=away_team,
+                    league=league,
+                    all_predictions=prediction_payload,
+                    metadata={
+                        'generated_at': timezone.now().isoformat(),
+                        'prediction_types': prediction_types,
+                    }
+                )
+
+                # Guardar resultados en sesión (compatibilidad)
                 request.session['last_prediction'] = {
                     'home_team': home_team,
                     'away_team': away_team,
                     'league': league.name,
-                    'all_predictions': all_predictions_by_type
+                    'all_predictions': prediction_payload,
+                    'saved_prediction_id': str(saved_prediction.id),
                 }
                 request.session.modified = True
                 request.session.save()
@@ -560,8 +576,8 @@ class PredictionFormView(View):
                 logger.info(f"✅ PREDICCIONES COMPLETADAS - Home: '{home_team}' vs Away: '{away_team}', Liga: {league.name}")
                 logger.info(f"📝 DATOS GUARDADOS - Total de tipos: {len(all_predictions_by_type)}")
                 
-                # Redirigir directamente a resultados
-                return redirect('ai_predictions:prediction_result')
+                # Redirigir directamente a resultados persistidos
+                return redirect('ai_predictions:prediction_result_with_id', prediction_id=saved_prediction.id)
                 
             except Exception as e:
                 logger.error(f"Error en predicción: {e}")
@@ -583,43 +599,61 @@ class PredictionFormView(View):
 class PredictionResultView(View):
     """Vista para mostrar resultados de predicción"""
     
-    def get(self, request):
+    def get(self, request, prediction_id=None):
         logger.info("🎯 INICIANDO PredictionResultView.get()")
         logger.info(f"🎯 REQUEST PATH: {request.path}")
         logger.info(f"🎯 REQUEST METHOD: {request.method}")
         logger.info(f"🎯 SESSION KEY: {request.session.session_key}")
-        
-        last_prediction = request.session.get('last_prediction')
-        logger.info(f"🎯 SESIÓN OBTENIDA: {last_prediction is not None}")
-        
-        if not last_prediction:
+
+        prediction_payload = None
+
+        if prediction_id:
+            saved_prediction = get_object_or_404(SavedPrediction, id=prediction_id)
+            if saved_prediction.user and saved_prediction.user != request.user and not request.user.is_staff:
+                messages.error(request, "No tienes permiso para ver esta predicción.")
+                return redirect('ai_predictions:prediction_form')
+
+            prediction_payload = {
+                'home_team': saved_prediction.home_team,
+                'away_team': saved_prediction.away_team,
+                'league': saved_prediction.league.name,
+                'all_predictions': saved_prediction.all_predictions,
+                'saved_prediction_id': str(saved_prediction.id),
+                'created_at': saved_prediction.created_at.isoformat(),
+            }
+            logger.info(f"🎯 PREDICCIÓN PERSISTIDA OBTENIDA: {saved_prediction.id}")
+        else:
+            prediction_payload = request.session.get('last_prediction')
+            logger.info(f"🎯 SESIÓN OBTENIDA: {prediction_payload is not None}")
+
+        if not prediction_payload:
             logger.info("🎯 REDIRIGIENDO: No hay predicciones en sesión")
             messages.info(request, "No hay predicciones recientes.")
             return redirect('ai_predictions:prediction_form')
-        
+
         # Log para verificar qué equipos se están mostrando
-        logger.info(f"📊 MOSTRANDO RESULTADOS - Home: '{last_prediction.get('home_team')}' vs Away: '{last_prediction.get('away_team')}', Liga: {last_prediction.get('league')}")
+        logger.info(f"📊 MOSTRANDO RESULTADOS - Home: '{prediction_payload.get('home_team')}' vs Away: '{prediction_payload.get('away_team')}', Liga: {prediction_payload.get('league')}")
         
         # Log detallado de la estructura de la predicción
-        logger.info(f"🔍 ESTRUCTURA DE PREDICCIÓN: {list(last_prediction.keys())}")
-        if 'all_predictions' in last_prediction:
-            logger.info(f"🔍 TIPOS DE PREDICCIÓN: {list(last_prediction['all_predictions'].keys())}")
-            logger.info(f"🔍 TOTAL TIPOS: {len(last_prediction['all_predictions'])}")
+        logger.info(f"🔍 ESTRUCTURA DE PREDICCIÓN: {list(prediction_payload.keys())}")
+        if 'all_predictions' in prediction_payload:
+            logger.info(f"🔍 TIPOS DE PREDICCIÓN: {list(prediction_payload['all_predictions'].keys())}")
+            logger.info(f"🔍 TOTAL TIPOS: {len(prediction_payload['all_predictions'])}")
         else:
             logger.error("❌ ERROR: 'all_predictions' no existe en la sesión")
         
         # Verificar que la predicción esté completa
-        if 'all_predictions' not in last_prediction or not last_prediction['all_predictions']:
+        if 'all_predictions' not in prediction_payload or not prediction_payload['all_predictions']:
             logger.error("❌ ERROR: Predicción incompleta - faltan datos")
-            logger.error(f"❌ ESTRUCTURA COMPLETA: {last_prediction}")
+            logger.error(f"❌ ESTRUCTURA COMPLETA: {prediction_payload}")
             messages.error(request, "Error: La predicción no se completó correctamente. Por favor, intenta nuevamente.")
             return redirect('ai_predictions:prediction_form')
         
         # Obtener todos los nombres de modelos únicos
         model_names = set()
         total_models = 0
-        if 'all_predictions' in last_prediction:
-            for pred_type, predictions in last_prediction['all_predictions'].items():
+        if 'all_predictions' in prediction_payload:
+            for pred_type, predictions in prediction_payload['all_predictions'].items():
                 total_models += len(predictions)
                 pred_model_names = [pred['model_name'] for pred in predictions]
                 logger.info(f"Tipo {pred_type}: {len(predictions)} modelos - {pred_model_names}")
@@ -631,7 +665,7 @@ class PredictionResultView(View):
         # Log para debugging
         logger.info(f"Modelos únicos encontrados: {model_names}")
         logger.info(f"Total de modelos generados: {total_models}")
-        logger.info(f"Tipos de predicción: {list(last_prediction.get('all_predictions', {}).keys())}")
+        logger.info(f"Tipos de predicción: {list(prediction_payload.get('all_predictions', {}).keys())}")
         
         # Verificación de que tenemos 3 modelos únicos
         if len(model_names) < 3:
@@ -641,7 +675,7 @@ class PredictionResultView(View):
             logger.info(f"[OK] Se encontraron {len(model_names)} modelos únicos correctamente")
         
         context = {
-            'prediction': last_prediction,
+            'prediction': prediction_payload,
             'model_names': model_names
         }
         return render(request, 'ai_predictions/prediction_result_new.html', context)

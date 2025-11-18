@@ -14,6 +14,7 @@ urlpatterns = [
     # Predicciones (solo con datos reales)
     path('predict/', views.PredictionFormView.as_view(), name='prediction_form'),
     path('predict/result/', views.PredictionResultView.as_view(), name='prediction_result'),
+    path('predict/result/<uuid:prediction_id>/', views.PredictionResultView.as_view(), name='prediction_result_with_id'),
     path('predict/quick/', views.QuickPredictionView.as_view(), name='quick_prediction'),
     
     # Entrenamiento de modelos

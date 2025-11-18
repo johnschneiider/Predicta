@@ -2,6 +2,9 @@
 Modelos para predicciones de IA
 """
 
+from uuid import uuid4
+
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from football_data.models import League, Match
@@ -127,3 +130,32 @@ class TeamStats(models.Model):
         if total_matches == 0:
             return 0.5
         return (self.recent_wins * 3 + self.recent_draws) / (total_matches * 3)
+
+
+class SavedPrediction(models.Model):
+    """
+    Predicciones guardadas para evitar dependencia de sesión.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='saved_predictions'
+    )
+    home_team = models.CharField(max_length=100, verbose_name="Equipo Local")
+    away_team = models.CharField(max_length=100, verbose_name="Equipo Visitante")
+    league = models.ForeignKey(League, on_delete=models.CASCADE, verbose_name="Liga")
+    all_predictions = models.JSONField(default=dict, verbose_name="Predicciones")
+    metadata = models.JSONField(default=dict, blank=True, verbose_name="Metadatos")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de creación")
+
+    class Meta:
+        verbose_name = "Predicción Guardada"
+        verbose_name_plural = "Predicciones Guardadas"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.home_team} vs {self.away_team} - {self.league.name}"

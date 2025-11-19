@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-05hl%jnp2o6j)8)zo=u8eu9_zkk7yd8h7&w^x6xix%@y*owsu+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'predicta.com.co', 'www.predicta.com.co']
 
 
 # Application definition

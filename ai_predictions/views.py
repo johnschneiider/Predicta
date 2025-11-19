@@ -340,14 +340,26 @@ class PredictionFormView(View):
     """Vista para el formulario de predicción"""
     
     def get(self, request):
-        form = PredictionForm()
-        leagues = League.objects.all()
-        
-        context = {
-            'form': form,
-            'leagues': leagues,
-        }
-        return render(request, 'ai_predictions/prediction_form.html', context)
+        logger.info("📋 PredictionFormView.get() - INICIANDO")
+        try:
+            logger.info("📋 Creando formulario...")
+            form = PredictionForm()
+            logger.info("📋 Obteniendo ligas...")
+            leagues = League.objects.all()
+            logger.info(f"📋 Ligas obtenidas: {leagues.count()}")
+            
+            context = {
+                'form': form,
+                'leagues': leagues,
+            }
+            logger.info("📋 Renderizando template...")
+            response = render(request, 'ai_predictions/prediction_form.html', context)
+            logger.info(f"📋 Template renderizado exitosamente - Status: {response.status_code}")
+            return response
+        except Exception as e:
+            logger.error(f"❌ ERROR en PredictionFormView.get(): {e}")
+            logger.error(f"❌ TRACEBACK:", exc_info=True)
+            raise
     
     def post(self, request):
         logger.info("Iniciando procesamiento de predicción...")

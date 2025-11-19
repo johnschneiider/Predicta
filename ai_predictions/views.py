@@ -536,7 +536,11 @@ class PredictionFormView(View):
                         
                     except Exception as e:
                         logger.error(f"❌ ERROR EN {pred_type}: {e}")
+                        logger.error(f"❌ TRACEBACK:", exc_info=True)
                         all_predictions_by_type[pred_type] = []
+                
+                logger.info(f"✅ BUCLE DE PREDICCIONES COMPLETADO - Total tipos procesados: {len(all_predictions_by_type)}")
+                logger.info(f"✅ TIPOS PROCESADOS: {list(all_predictions_by_type.keys())}")
                 
                 # AGREGAR PREDICCIÓN OFICIAL (después de todos los otros modelos)
                 logger.info("🎯 OFICIAL - Iniciando cálculo de predicción oficial")
@@ -547,6 +551,10 @@ class PredictionFormView(View):
                 except Exception as e:
                     logger.error(f"❌ OFICIAL - Error agregando predicción oficial: {e}")
                     logger.error(f"❌ OFICIAL - Traceback:", exc_info=True)
+                    # Continuar aunque falle la predicción oficial
+                
+                logger.info(f"📊 TOTAL PREDICCIONES GENERADAS: {len(all_predictions_by_type)} tipos")
+                logger.info(f"📊 TIPOS DE PREDICCIÓN: {list(all_predictions_by_type.keys())}")
                 
                 # Guardar resultados persistidos para evitar pérdida en sesiones multi-worker
                 logger.info("💾 INICIANDO GUARDADO EN BD - Convirtiendo numpy a nativo")

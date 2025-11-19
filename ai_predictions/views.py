@@ -537,47 +537,72 @@ class PredictionFormView(View):
                     logger.error(f"❌ OFICIAL - Traceback:", exc_info=True)
                 
                 # Guardar resultados persistidos para evitar pérdida en sesiones multi-worker
-                prediction_payload = convert_numpy_to_native(all_predictions_by_type)
-                saved_prediction = SavedPrediction.objects.create(
-                    user=request.user if request.user.is_authenticated else None,
-                    home_team=home_team,
-                    away_team=away_team,
-                    league=league,
-                    all_predictions=prediction_payload,
-                    metadata={
-                        'generated_at': timezone.now().isoformat(),
-                        'prediction_types': prediction_types,
-                    }
-                )
-
-                # Guardar resultados en sesión (compatibilidad)
-                request.session['last_prediction'] = {
-                    'home_team': home_team,
-                    'away_team': away_team,
-                    'league': league.name,
-                    'all_predictions': prediction_payload,
-                    'saved_prediction_id': str(saved_prediction.id),
-                }
-                request.session.modified = True
-                request.session.save()
-                # Marcar progreso como completado
+                logger.info("💾 INICIANDO GUARDADO EN BD - Convirtiendo numpy a nativo")
                 try:
-                    request.session['prediction_progress'] = {
-                        'current': len(prediction_types),
-                        'total': len(prediction_types),
-                        'current_type': 'Completado',
-                        'status': 'completed'
+                    prediction_payload = convert_numpy_to_native(all_predictions_by_type)
+                    logger.info(f"💾 CONVERSIÓN EXITOSA - Tipos de predicción: {len(prediction_payload)}")
+                    
+                    logger.info(f"💾 CREANDO SavedPrediction - Home: '{home_team}' vs Away: '{away_team}'")
+                    saved_prediction = SavedPrediction.objects.create(
+                        user=request.user if request.user.is_authenticated else None,
+                        home_team=home_team,
+                        away_team=away_team,
+                        league=league,
+                        all_predictions=prediction_payload,
+                        metadata={
+                            'generated_at': timezone.now().isoformat(),
+                            'prediction_types': list(prediction_payload.keys()),
+                        }
+                    )
+                    logger.info(f"✅ PREDICCIÓN GUARDADA EN BD - ID: {saved_prediction.id}")
+                    
+                    # Guardar resultados en sesión (compatibilidad)
+                    logger.info("💾 GUARDANDO EN SESIÓN - Compatibilidad")
+                    request.session['last_prediction'] = {
+                        'home_team': home_team,
+                        'away_team': away_team,
+                        'league': league.name,
+                        'all_predictions': prediction_payload,
+                        'saved_prediction_id': str(saved_prediction.id),
                     }
                     request.session.modified = True
                     request.session.save()
+                    logger.info(f"✅ SESIÓN GUARDADA - Session key: {request.session.session_key}")
+                    
+                    # Marcar progreso como completado
+                    try:
+                        request.session['prediction_progress'] = {
+                            'current': len(prediction_types),
+                            'total': len(prediction_types),
+                            'current_type': 'Completado',
+                            'status': 'completed'
+                        }
+                        request.session.modified = True
+                        request.session.save()
+                    except Exception as e:
+                        logger.debug(f"No se pudo marcar progreso completado: {e}")
+                    
+                    logger.info(f"✅ PREDICCIONES COMPLETADAS - Home: '{home_team}' vs Away: '{away_team}', Liga: {league.name}")
+                    logger.info(f"📝 DATOS GUARDADOS - Total de tipos: {len(all_predictions_by_type)}")
+                    logger.info(f"🔗 REDIRIGIENDO A: /ai/predict/result/{saved_prediction.id}/")
+                    
+                    # Redirigir directamente a resultados persistidos
+                    return redirect('ai_predictions:prediction_result_with_id', prediction_id=saved_prediction.id)
+                    
                 except Exception as e:
-                    logger.debug(f"No se pudo marcar progreso completado: {e}")
-                
-                logger.info(f"✅ PREDICCIONES COMPLETADAS - Home: '{home_team}' vs Away: '{away_team}', Liga: {league.name}")
-                logger.info(f"📝 DATOS GUARDADOS - Total de tipos: {len(all_predictions_by_type)}")
-                
-                # Redirigir directamente a resultados persistidos
-                return redirect('ai_predictions:prediction_result_with_id', prediction_id=saved_prediction.id)
+                    logger.error(f"❌ ERROR GUARDANDO PREDICCIÓN EN BD: {e}")
+                    logger.error(f"❌ TRACEBACK:", exc_info=True)
+                    # Continuar con sesión como fallback
+                    request.session['last_prediction'] = {
+                        'home_team': home_team,
+                        'away_team': away_team,
+                        'league': league.name,
+                        'all_predictions': convert_numpy_to_native(all_predictions_by_type),
+                    }
+                    request.session.modified = True
+                    request.session.save()
+                    logger.info("⚠️ USANDO SESIÓN COMO FALLBACK - Redirigiendo sin ID")
+                    return redirect('ai_predictions:prediction_result')
                 
             except Exception as e:
                 logger.error(f"Error en predicción: {e}")
